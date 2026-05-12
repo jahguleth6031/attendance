@@ -1,1 +1,189 @@
-<h1>測試成功</h1>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>出勤管理系統</title>
+<style>
+  :root {
+    --bg: #f7f4ef;
+    --paper: #fffef9;
+    --ink: #1a1710;
+    --ink-light: #4a4640;
+    --ink-faint: #9a9590;
+    --border: #d4cfc8;
+    --present: #2c7a4b;
+    --present-bg: #e8f5ee;
+    --absent: #c0392b;
+    --absent-bg: #fdf0ee;
+    --accent-light: #e8d5d3;
+    --shadow: 0 2px 12px rgba(26,23,16,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'PMingLiU','新細明體','MingLiU',serif; background: var(--bg); color: var(--ink); min-height: 100vh; padding: 20px 16px 40px; }
+  .header { text-align: center; margin-bottom: 28px; padding-bottom: 16px; border-bottom: 2px solid var(--ink); }
+  .header h1 { font-size: 26px; letter-spacing: 6px; font-weight: 700; }
+  .header .subtitle { font-size: 13px; color: var(--ink-light); margin-top: 4px; letter-spacing: 2px; }
+  .tabs { display: flex; margin-bottom: 20px; border: 1.5px solid var(--ink); border-radius: 4px; overflow: hidden; }
+  .tab { flex: 1; padding: 10px 6px; text-align: center; font-family: inherit; font-size: 13px; letter-spacing: 1px; cursor: pointer; background: var(--paper); border: none; border-right: 1.5px solid var(--ink); }
+  .tab:last-child { border-right: none; }
+  .tab.active { background: var(--ink); color: #fff; }
+  .date-bar { display: flex; align-items: center; gap: 10px; background: var(--paper); border: 1.5px solid var(--border); border-radius: 4px; padding: 10px 14px; margin-bottom: 18px; }
+  .date-bar label { font-size: 13px; color: var(--ink-light); white-space: nowrap; }
+  .date-bar input[type=date] { flex: 1; border: none; background: transparent; font-family: inherit; font-size: 15px; color: var(--ink); outline: none; }
+  .date-nav { display: flex; gap: 6px; }
+  .date-nav button { background: var(--bg); border: 1px solid var(--border); border-radius: 3px; width: 30px; height: 30px; cursor: pointer; font-size: 14px; color: var(--ink-light); }
+  .summary { display: flex; gap: 12px; background: var(--paper); border: 1.5px solid var(--border); border-radius: 4px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; }
+  .summary span { color: var(--ink-faint); }
+  .summary strong { color: var(--ink); margin-left: 3px; }
+  .summary .s-present { color: var(--present); }
+  .summary .s-absent { color: var(--absent); }
+  .attendance-list { display: flex; flex-direction: column; gap: 8px; }
+  .emp-card { background: var(--paper); border: 1.5px solid var(--border); border-radius: 4px; padding: 12px 14px; }
+  .emp-card.present { border-left: 4px solid var(--present); }
+  .emp-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .check-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .check-btn.checked { background: var(--present); border-color: var(--present); color: #fff; }
+  .emp-name { flex: 1; font-size: 16px; letter-spacing: 1px; font-weight: 500; }
+  .emp-status { font-size: 12px; padding: 2px 8px; border-radius: 10px; letter-spacing: 1px; }
+  .emp-status.present { background: var(--present-bg); color: var(--present); }
+  .emp-status.absent { background: var(--bg); color: var(--ink-faint); }
+  .time-row { display: flex; gap: 8px; align-items: center; }
+  .time-field { display: flex; align-items: center; gap: 4px; flex: 1; }
+  .time-field label { font-size: 12px; color: var(--ink-faint); white-space: nowrap; }
+  .time-field input[type=time] { flex: 1; border: 1px solid var(--border); border-radius: 3px; padding: 4px 6px; font-family: inherit; font-size: 13px; background: var(--bg); color: var(--ink); outline: none; }
+  .note-input { margin-top: 6px; width: 100%; border: 1px solid var(--border); border-radius: 3px; padding: 4px 8px; font-family: inherit; font-size: 12px; background: var(--bg); color: var(--ink-light); outline: none; resize: none; }
+  .emp-manager { display: flex; flex-direction: column; gap: 12px; }
+  .add-emp-row { display: flex; gap: 8px; background: var(--paper); border: 1.5px solid var(--border); border-radius: 4px; padding: 10px 12px; }
+  .add-emp-row input { flex: 1; border: 1px solid var(--border); border-radius: 3px; padding: 7px 10px; font-family: inherit; font-size: 14px; background: var(--bg); color: var(--ink); outline: none; }
+  .btn-add { background: var(--ink); color: #fff; border: none; border-radius: 3px; padding: 7px 16px; font-family: inherit; font-size: 13px; cursor: pointer; letter-spacing: 1px; }
+  .emp-list-manage { display: flex; flex-direction: column; gap: 6px; }
+  .emp-row-manage { display: flex; align-items: center; gap: 8px; background: var(--paper); border: 1.5px solid var(--border); border-radius: 4px; padding: 8px 12px; }
+  .emp-row-num { width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .emp-row-name-input { flex: 1; border: 1px solid transparent; border-radius: 3px; padding: 4px 6px; font-family: inherit; font-size: 15px; background: transparent; color: var(--ink); outline: none; }
+  .btn-del { background: transparent; border: 1px solid var(--border); border-radius: 3px; padding: 4px 10px; font-family: inherit; font-size: 12px; color: var(--absent); cursor: pointer; flex-shrink: 0; }
+  .report-panel { display: flex; flex-direction: column; gap: 12px; }
+  .report-range { display: flex; gap: 8px; align-items: center; background: var(--paper); border: 1.5px solid var(--border); border-radius: 4px; padding: 10px 14px; flex-wrap: wrap; }
+  .report-range label { font-size: 13px; color: var(--ink-light); }
+  .report-range input[type=date] { border: 1px solid var(--border); border-radius: 3px; padding: 5px 8px; font-family: inherit; font-size: 13px; background: var(--bg); outline: none; }
+  .btn-report { background: var(--ink); color: #fff; border: none; border-radius: 3px; padding: 7px 18px; font-family: inherit; font-size: 13px; cursor: pointer; letter-spacing: 1px; margin-left: auto; }
+  .btn-print { background: transparent; border: 1.5px solid var(--ink); color: var(--ink); border-radius: 3px; padding: 7px 14px; font-family: inherit; font-size: 13px; cursor: pointer; }
+  .report-table-wrap { background: var(--paper); border: 1.5px solid var(--border); border-radius: 4px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { background: var(--ink); color: #fff; padding: 8px 10px; text-align: center; letter-spacing: 1px; font-weight: 500; white-space: nowrap; }
+  tbody td { padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: center; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  .td-present { color: var(--present); font-weight: 500; }
+  .td-absent { color: var(--ink-faint); }
+  .empty-hint { text-align: center; color: var(--ink-faint); font-size: 13px; padding: 30px 0; letter-spacing: 1px; }
+  .print-header { display: none; }
+  @media print {
+    body { background: #fff; padding: 10mm; }
+    .tabs, .date-bar, .summary, .btn-print, .btn-report, .report-range, #tab-attend, #tab-emp, #tab-backup { display: none !important; }
+    .print-header { display: block !important; text-align: center; margin-bottom: 12px; }
+  }
+</style>
+</head>
+  <body>
+<div class="header">
+  <h1>出　勤　管　理</h1>
+  <div class="subtitle">Attendance Management System</div>
+  <div id="unsaved-badge" style="display:none;margin-top:8px;background:#c0392b;color:#fff;font-size:12px;letter-spacing:1px;padding:3px 12px;border-radius:10px;">⚠️ 有未存檔資料，請記得備份</div>
+</div>
+<div class="tabs">
+  <button class="tab active" onclick="showTab('attend')">每日出勤</button>
+  <button class="tab" onclick="showTab('emp')">員工名單</button>
+  <button class="tab" onclick="showTab('report')">出勤報表</button>
+  <button class="tab" onclick="showTab('backup')">備份</button>
+</div>
+<div id="tab-attend">
+  <div class="date-bar">
+    <label>日期：</label>
+    <input type="date" id="currentDate" onchange="renderAttendance()">
+    <div class="date-nav">
+      <button onclick="changeDate(-1)">◀</button>
+      <button onclick="changeDate(1)">▶</button>
+    </div>
+  </div>
+  <div class="summary">
+    <span>應到：<strong id="s-total">0</strong> 人</span>
+    <span class="s-present">出勤：<strong id="s-present">0</strong></span>
+    <span class="s-absent">缺勤：<strong id="s-absent">0</strong></span>
+  </div>
+  <div class="attendance-list" id="attendanceList"></div>
+</div>
+<div id="tab-emp" style="display:none">
+  <div class="emp-manager">
+    <div class="add-emp-row">
+      <input type="text" id="newEmpName" placeholder="輸入新員工姓名" onkeydown="if(event.key==='Enter')addEmployee()">
+      <button class="btn-add" onclick="addEmployee()">＋ 新增</button>
+    </div>
+    <div class="emp-list-manage" id="empListManage"></div>
+  </div>
+</div>
+<div id="tab-backup" style="display:none">
+  <div style="display:flex;flex-direction:column;gap:14px;">
+    <div style="background:var(--paper);border:1.5px solid var(--border);border-radius:4px;padding:16px 14px;">
+      <div style="font-size:14px;font-weight:500;letter-spacing:2px;margin-bottom:8px;">📤 匯出備份</div>
+      <div style="font-size:12px;color:var(--ink-faint);margin-bottom:12px;line-height:1.6;">將目前所有出勤資料存成 .json 檔案，下次開啟後可再匯入。</div>
+      <button onclick="exportBackup()" style="width:100%;background:var(--ink);color:#fff;border:none;border-radius:3px;padding:11px;font-family:inherit;font-size:14px;letter-spacing:2px;cursor:pointer;">匯出備份檔案</button>
+    </div>
+    <div style="background:var(--paper);border:1.5px solid var(--border);border-radius:4px;padding:16px 14px;">
+      <div style="font-size:14px;font-weight:500;letter-spacing:2px;margin-bottom:8px;">📥 匯入備份</div>
+      <div style="font-size:12px;color:var(--ink-faint);margin-bottom:12px;line-height:1.6;">選擇之前匯出的 .json 備份檔，還原所有資料。⚠️ 匯入後會覆蓋目前資料。</div>
+      <label style="display:block;width:100%;background:var(--bg);border:1.5px dashed var(--border);border-radius:3px;padding:11px;text-align:center;font-family:inherit;font-size:14px;letter-spacing:2px;cursor:pointer;color:var(--ink-light);">
+        選擇備份檔案
+        <input type="file" accept=".json" onchange="importBackup(this)" style="display:none">
+      </label>
+    </div>
+    <div style="background:var(--accent-light);border:1.5px solid var(--border);border-radius:4px;padding:12px 14px;font-size:12px;color:var(--ink-light);line-height:1.7;">
+      💡 關閉 App 前會自動下載備份，請確認儲存。下次開啟後到備份頁匯入即可。
+    </div>
+  </div>
+</div>
+<div id="tab-report" style="display:none">
+  <div class="report-panel">
+    <div class="report-range">
+      <label>起：</label><input type="date" id="reportStart">
+      <label>迄：</label><input type="date" id="reportEnd">
+      <button class="btn-report" onclick="generateReport()">產生報表</button>
+      <button class="btn-print" onclick="window.print()">列印</button>
+    </div>
+    <div class="print-header"><h2>員工出勤紀錄表</h2><p id="printDateRange"></p></div>
+    <div class="report-table-wrap" id="reportWrap">
+      <div class="empty-hint">請選擇日期區間後按「產生報表」</div>
+    </div>
+  </div>
+</div>
+    <script>
+var employees = ['王小明','李小花','張大偉','陳美玲','林志豪'];
+var records = {};
+var isDirty = false;
+function today(){var n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
+function markDirty(){isDirty=true;document.getElementById('unsaved-badge').style.display='inline';}
+function markClean(){isDirty=false;document.getElementById('unsaved-badge').style.display='none';}
+function getRecord(date,id){if(!records[date])records[date]={};if(!records[date][id])records[date][id]={present:false,in:'08:00',out:'17:00',note:''};return records[date][id];}
+window.addEventListener('beforeunload',function(e){if(!isDirty)return;doExport();e.preventDefault();e.returnValue='';});
+document.getElementById('currentDate').value=today();
+var r6=new Date();r6.setMonth(r6.getMonth()-6);r6.setDate(1);
+document.getElementById('reportStart').value=r6.getFullYear()+'-'+String(r6.getMonth()+1).padStart(2,'0')+'-01';
+document.getElementById('reportEnd').value=today();
+renderAttendance();renderEmpManager();
+function showTab(name){['attend','emp','report','backup'].forEach(function(t){document.getElementById('tab-'+t).style.display=t===name?'':'none';});document.querySelectorAll('.tab').forEach(function(el,i){el.classList.toggle('active',['attend','emp','report','backup'][i]===name);});if(name==='emp')renderEmpManager();if(name==='attend')renderAttendance();}
+function changeDate(delta){var inp=document.getElementById('currentDate');var d=new Date(inp.value+'T00:00:00');d.setDate(d.getDate()+delta);inp.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');renderAttendance();}
+function renderAttendance(){var date=document.getElementById('currentDate').value;var list=document.getElementById('attendanceList');if(employees.length===0){list.innerHTML='<div class="empty-hint">請先至員工名單新增員工</div>';return;}list.innerHTML=employees.map(function(name,i){var r=getRecord(date,i);return '<div class="emp-card '+(r.present?'present':'')+'">'+'<div class="emp-top">'+'<button class="check-btn '+(r.present?'checked':'')+'" onclick="togglePresent(\''+date+'\','+i+')">'+(r.present?'✓':'')+'</button>'+'<div class="emp-name">'+name+'</div>'+'<span class="emp-status '+(r.present?'present':'absent')+'">'+(r.present?'出勤':'缺勤')+'</span>'+'</div>'+'<div class="time-row">'+'<div class="time-field"><label>上班</label><input type="time" value="'+r.in+'" onchange="updateTime(\''+date+'\','+i+',\'in\',this.value)" '+(r.present?'':'disabled')+'></div>'+'<div class="time-field"><label>下班</label><input type="time" value="'+r.out+'" onchange="updateTime(\''+date+'\','+i+',\'out\',this.value)" '+(r.present?'':'disabled')+'></div>'+'</div>'+'<textarea class="note-input" rows="1" placeholder="備註" onchange="updateNote(\''+date+'\','+i+',this.value)">'+r.note+'</textarea>'+'</div>';}).join('');updateSummary(date);}
+function togglePresent(date,idx){var r=getRecord(date,idx);r.present=!r.present;markDirty();renderAttendance();}
+function updateTime(date,idx,key,val){getRecord(date,idx)[key]=val;markDirty();}
+function updateNote(date,idx,val){getRecord(date,idx).note=val;markDirty();}
+function updateSummary(date){var t=employees.length,p=0;employees.forEach(function(_,i){if(getRecord(date,i).present)p++;});document.getElementById('s-total').textContent=t;document.getElementById('s-present').textContent=p;document.getElementById('s-absent').textContent=t-p;}
+function renderEmpManager(){var w=document.getElementById('empListManage');if(employees.length===0){w.innerHTML='<div class="empty-hint">尚無員工</div>';return;}w.innerHTML=employees.map(function(name,i){return '<div class="emp-row-manage"><div class="emp-row-num">'+(i+1)+'</div><input class="emp-row-name-input" value="'+name+'" onchange="renameEmployee('+i+',this.value)"><button class="btn-del" onclick="deleteEmployee('+i+')">刪除</button></div>';}).join('');}
+function addEmployee(){var inp=document.getElementById('newEmpName');var name=inp.value.trim();if(!name)return;employees.push(name);inp.value='';markDirty();renderEmpManager();}
+function renameEmployee(i,name){if(name.trim()){employees[i]=name.trim();markDirty();}}
+function deleteEmployee(i){if(!confirm('確定刪除「'+employees[i]+'」？'))return;employees.splice(i,1);markDirty();renderEmpManager();}
+function generateReport(){var start=document.getElementById('reportStart').value;var end=document.getElementById('reportEnd').value;if(!start||!end||start>end){alert('請選擇正確日期區間');return;}var days=[],cur=new Date(start+'T00:00:00'),last=new Date(end+'T00:00:00');while(cur<=last){days.push(cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0'));cur.setDate(cur.getDate()+1);}document.getElementById('printDateRange').textContent=start+' ～ '+end;var thead='<tr><th>姓名</th>'+days.map(function(d){return '<th>'+d.slice(5)+'</th>';}).join('')+'<th>出勤天數</th><th>出勤率</th></tr>';var tbody=employees.map(function(name,i){var count=0;var cells=days.map(function(d){var r=getRecord(d,i);if(r.present){count++;return '<td class="td-present">✓<br><span style="font-size:11px">'+r.in+'-'+r.out+'</span></td>';}return '<td class="td-absent">—</td>';}).join('');var rate=Math.round(count/days.length*100);return '<tr><td style="text-align:left;padding-left:12px">'+name+'</td>'+cells+'<td><strong>'+count+'</strong></td><td>'+rate+'%</td></tr>';}).join('');document.getElementById('reportWrap').innerHTML='<table><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table>';}
+function doExport(){var data=JSON.stringify({employees:employees,records:records},null,2);var blob=new Blob([data],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='attendance-backup-'+today()+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}
+function exportBackup(){doExport();markClean();}
+function importBackup(input){var file=input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(e){try{var data=JSON.parse(e.target.result);if(!data.employees||!data.records){alert('格式錯誤');return;}employees=data.employees;records=data.records;markClean();alert('匯入成功！共'+employees.length+'位員工');renderAttendance();renderEmpManager();}catch(err){alert('讀取失敗');}};reader.readAsText(file);input.value='';}
+</script>
+</body>
+</html>
