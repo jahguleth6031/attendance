@@ -75,3 +75,113 @@ tbody tr:last-child td{border-bottom:none;}
 @media print{body{background:#fff;padding:10mm;}.tabs,.date-bar,.summary,.report-range,#tab-attend,#tab-emp,#tab-backup{display:none!important;}.print-title{display:block;text-align:center;margin-bottom:12px;}}
 </style>
 </head>
+<body>
+<div class="header">
+  <h1>出　勤　管　理</h1>
+  <div class="subtitle">Attendance Management System</div>
+  <div class="auto-save-badge">✓ 自動儲存中</div>
+</div>
+<div class="tabs">
+  <button class="tab active" onclick="showTab('attend')">每日出勤</button>
+  <button class="tab" onclick="showTab('emp')">員工名單</button>
+  <button class="tab" onclick="showTab('report')">出勤報表</button>
+  <button class="tab" onclick="showTab('backup')">備份</button>
+</div>
+<div id="tab-attend">
+  <div class="date-bar">
+    <label>日期：</label>
+    <input type="date" id="currentDate" onchange="renderAttendance()">
+    <div class="date-nav">
+      <button onclick="changeDate(-1)">◀</button>
+      <button onclick="changeDate(1)">▶</button>
+    </div>
+  </div>
+  <div class="summary">
+    <span>應到：<strong id="s-total">0</strong> 人</span>
+    <span class="s-present">出勤：<strong id="s-present">0</strong></span>
+    <span class="s-absent">缺勤：<strong id="s-absent">0</strong></span>
+  </div>
+  <div class="attendance-list" id="attendanceList"></div>
+</div>
+<div id="tab-emp" style="display:none">
+  <div class="emp-manager">
+    <div class="add-emp-row">
+      <input type="text" id="newEmpName" placeholder="輸入新員工姓名" onkeydown="if(event.key==='Enter')addEmployee()">
+      <button class="btn-add" onclick="addEmployee()">＋ 新增</button>
+    </div>
+    <div class="emp-list-manage" id="empListManage"></div>
+  </div>
+</div>
+<div id="tab-report" style="display:none">
+  <div class="report-panel">
+    <div class="report-range">
+      <label>起：</label><input type="date" id="reportStart">
+      <label>迄：</label><input type="date" id="reportEnd">
+      <button class="btn-report" onclick="generateReport()">產生</button>
+      <button class="btn-img" onclick="exportImage()">📷 存圖</button>
+      <button class="btn-print" onclick="window.print()">列印</button>
+    </div>
+    <div class="print-title"><h2>員工出勤紀錄表</h2><p id="printDateRange"></p></div>
+    <div class="report-table-wrap" id="reportWrap">
+      <div class="empty-hint">請選擇日期區間後按「產生」</div>
+    </div>
+  </div>
+</div>
+<div id="tab-backup" style="display:none">
+  <div class="backup-panel">
+    <div class="backup-card" style="background:var(--present-bg);border-color:var(--present);">
+      <h3>✅ 自動儲存已開啟</h3>
+      <p>所有出勤資料會在每次變動後自動儲存到瀏覽器，關掉重開都不會消失。</p>
+    </div>
+    <div class="backup-card">
+      <h3>📤 匯出備份</h3>
+      <p>換手機或清除瀏覽器資料前，先匯出備份檔保存。</p>
+      <button class="btn-full" onclick="exportBackup()" style="background:var(--ink);color:#fff;">匯出備份檔案（.json）</button>
+    </div>
+    <div class="backup-card">
+      <h3>📥 匯入備份</h3>
+      <p>選擇之前匯出的 .json 備份檔還原資料。⚠️ 匯入後會覆蓋目前資料。</p>
+      <label class="btn-full" style="background:var(--bg);border:1.5px dashed var(--border);display:block;text-align:center;padding:11px;cursor:pointer;color:var(--ink-light);">
+        選擇備份檔案
+        <input type="file" accept=".json" onchange="importBackup(this)" style="display:none">
+      </label>
+    </div>
+    <div class="backup-card">
+      <h3>🗑️ 清除所有資料</h3>
+      <p>清除瀏覽器中所有出勤紀錄（建議先匯出備份）。</p>
+      <button class="btn-full" onclick="clearAll()" style="background:var(--absent);color:#fff;">清除全部資料</button>
+    </div>
+  </div>
+</div>
+<script>
+var STORAGE_KEY='atd_v3';
+function loadData(){try{var raw=localStorage.getItem(STORAGE_KEY);if(raw){var d=JSON.parse(raw);employees=d.employees||defaultEmployees();records=d.records||{};}}catch(e){employees=defaultEmployees();records={};}}
+function saveData(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({employees:employees,records:records}));}catch(e){}}
+function defaultEmployees(){return ['王小明','李小花','張大偉','陳美玲','林志豪'];}
+var employees=defaultEmployees();var records={};loadData();
+function today(){var n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
+function getRecord(date,id){if(!records[date])records[date]={};if(!records[date][id])records[date][id]={present:false,in:'08:00',out:'17:00',note:''};return records[date][id];}
+document.getElementById('currentDate').value=today();
+var r6=new Date();r6.setMonth(r6.getMonth()-6);r6.setDate(1);
+document.getElementById('reportStart').value=r6.getFullYear()+'-'+String(r6.getMonth()+1).padStart(2,'0')+'-01';
+document.getElementById('reportEnd').value=today();
+renderAttendance();renderEmpManager();
+function showTab(name){['attend','emp','report','backup'].forEach(function(t){document.getElementById('tab-'+t).style.display=t===name?'':'none';});document.querySelectorAll('.tab').forEach(function(el,i){el.classList.toggle('active',['attend','emp','report','backup'][i]===name);});if(name==='emp')renderEmpManager();if(name==='attend')renderAttendance();}
+function changeDate(delta){var inp=document.getElementById('currentDate');var d=new Date(inp.value+'T00:00:00');d.setDate(d.getDate()+delta);inp.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');renderAttendance();}
+function renderAttendance(){var date=document.getElementById('currentDate').value;var list=document.getElementById('attendanceList');if(employees.length===0){list.innerHTML='<div class="empty-hint">請先至員工名單新增員工</div>';return;}list.innerHTML=employees.map(function(name,i){var r=getRecord(date,i);return '<div class="emp-card '+(r.present?'present':'')+'">'+'<div class="emp-top">'+'<button class="check-btn '+(r.present?'checked':'')+'" onclick="togglePresent(\''+date+'\','+i+')">'+(r.present?'✓':'')+'</button>'+'<div class="emp-name">'+name+'</div>'+'<span class="emp-status '+(r.present?'present':'absent')+'">'+(r.present?'出勤':'缺勤')+'</span>'+'</div>'+'<div class="time-row">'+'<div class="time-field"><label>上班</label><input type="time" value="'+r.in+'" onchange="updateTime(\''+date+'\','+i+',\'in\',this.value)" '+(r.present?'':'disabled')+'></div>'+'<div class="time-field"><label>下班</label><input type="time" value="'+r.out+'" onchange="updateTime(\''+date+'\','+i+',\'out\',this.value)" '+(r.present?'':'disabled')+'></div>'+'</div>'+'<textarea class="note-input" rows="1" placeholder="備註" onchange="updateNote(\''+date+'\','+i+',this.value)">'+r.note+'</textarea>'+'</div>';}).join('');updateSummary(date);}
+function togglePresent(date,idx){var r=getRecord(date,idx);r.present=!r.present;saveData();renderAttendance();}
+function updateTime(date,idx,key,val){getRecord(date,idx)[key]=val;saveData();}
+function updateNote(date,idx,val){getRecord(date,idx).note=val;saveData();}
+function updateSummary(date){var t=employees.length,p=0;employees.forEach(function(_,i){if(getRecord(date,i).present)p++;});document.getElementById('s-total').textContent=t;document.getElementById('s-present').textContent=p;document.getElementById('s-absent').textContent=t-p;}
+function renderEmpManager(){var w=document.getElementById('empListManage');if(employees.length===0){w.innerHTML='<div class="empty-hint">尚無員工</div>';return;}w.innerHTML=employees.map(function(name,i){return '<div class="emp-row-manage"><div class="emp-row-num">'+(i+1)+'</div><input class="emp-row-name-input" value="'+name+'" onchange="renameEmployee('+i+',this.value)"><button class="btn-del" onclick="deleteEmployee('+i+')">刪除</button></div>';}).join('');}
+function addEmployee(){var inp=document.getElementById('newEmpName');var name=inp.value.trim();if(!name)return;employees.push(name);inp.value='';saveData();renderEmpManager();}
+function renameEmployee(i,name){if(name.trim()){employees[i]=name.trim();saveData();}}
+function deleteEmployee(i){if(!confirm('確定刪除「'+employees[i]+'」？'))return;employees.splice(i,1);saveData();renderEmpManager();}
+function generateReport(){var start=document.getElementById('reportStart').value;var end=document.getElementById('reportEnd').value;if(!start||!end||start>end){alert('請選擇正確日期區間');return;}var days=[],cur=new Date(start+'T00:00:00'),last=new Date(end+'T00:00:00');while(cur<=last){days.push(cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0'));cur.setDate(cur.getDate()+1);}document.getElementById('printDateRange').textContent=start+' ～ '+end;var thead='<tr><th>姓名</th>'+days.map(function(d){return '<th>'+d.slice(5)+'</th>';}).join('')+'<th>出勤天數</th><th>出勤率</th></tr>';var tbody=employees.map(function(name,i){var count=0;var cells=days.map(function(d){var r=getRecord(d,i);if(r.present){count++;return '<td class="td-present">✓<br><span style="font-size:11px">'+r.in+'-'+r.out+'</span></td>';}return '<td class="td-absent">—</td>';}).join('');var rate=Math.round(count/days.length*100);return '<tr><td style="text-align:left;padding-left:12px">'+name+'</td>'+cells+'<td><strong>'+count+'</strong></td><td>'+rate+'%</td></tr>';}).join('');document.getElementById('reportWrap').innerHTML='<table><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table>';}
+function exportImage(){var wrap=document.getElementById('reportWrap');if(wrap.querySelector('.empty-hint')){alert('請先產生報表再存圖');return;}var start=document.getElementById('reportStart').value;var end=document.getElementById('reportEnd').value;html2canvas(wrap,{backgroundColor:'#fffef9',scale:2}).then(function(canvas){var a=document.createElement('a');a.download='出勤報表-'+start+'-'+end+'.png';a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();document.body.removeChild(a);});}
+function exportBackup(){var data=JSON.stringify({employees:employees,records:records},null,2);var blob=new Blob([data],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='attendance-backup-'+today()+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}
+function importBackup(input){var file=input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(e){try{var d=JSON.parse(e.target.result);if(!d.employees||!d.records){alert('格式錯誤');return;}employees=d.employees;records=d.records;saveData();alert('匯入成功！共'+employees.length+'位員工');renderAttendance();renderEmpManager();}catch(err){alert('讀取失敗');}};reader.readAsText(file);input.value='';}
+function clearAll(){if(!confirm('確定要清除所有資料？此動作無法復原！'))return;employees=defaultEmployees();records={};saveData();alert('已清除');renderAttendance();renderEmpManager();}
+</script>
+</body>
+</html>
