@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>出勤管理系統</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 :root{--bg:#f7f4ef;--paper:#fffef9;--ink:#1a1710;--ink-light:#4a4640;--ink-faint:#9a9590;--border:#d4cfc8;--present:#2c7a4b;--present-bg:#e8f5ee;--absent:#c0392b;--absent-bg:#fdf0ee;--accent-light:#e8d5d3;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -55,7 +54,7 @@ body{font-family:'PMingLiU','新細明體','MingLiU',serif;background:var(--bg);
 .report-range label{font-size:13px;color:var(--ink-light);}
 .report-range input[type=date]{border:1px solid var(--border);border-radius:3px;padding:5px 8px;font-family:inherit;font-size:13px;background:var(--bg);outline:none;}
 .btn-report{background:var(--ink);color:#fff;border:none;border-radius:3px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer;letter-spacing:1px;}
-.btn-img{background:var(--present);color:#fff;border:none;border-radius:3px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer;letter-spacing:1px;}
+.btn-img{color:#fff;border:none;border-radius:3px;padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer;letter-spacing:1px;}
 .btn-print{background:transparent;border:1.5px solid var(--ink);color:var(--ink);border-radius:3px;padding:7px 12px;font-family:inherit;font-size:13px;cursor:pointer;}
 .report-table-wrap{background:var(--paper);border:1.5px solid var(--border);border-radius:4px;overflow-x:auto;}
 table{width:100%;border-collapse:collapse;font-size:13px;}
@@ -118,7 +117,8 @@ tbody tr:last-child td{border-bottom:none;}
       <label>起：</label><input type="date" id="reportStart">
       <label>迄：</label><input type="date" id="reportEnd">
       <button class="btn-report" onclick="generateReport()">產生</button>
-      <button class="btn-img" onclick="exportImage()">📷 存圖</button>
+      <button class="btn-img" onclick="exportImage('simple')" style="background:#2c7a4b;">📊 簡表</button>
+      <button class="btn-img" onclick="exportImage('detail')" style="background:#1a6b8a;">📋 明細</button>
       <button class="btn-print" onclick="window.print()">列印</button>
     </div>
     <div class="print-title"><h2>員工出勤紀錄表</h2><p id="printDateRange"></p></div>
@@ -157,7 +157,7 @@ tbody tr:last-child td{border-bottom:none;}
 var STORAGE_KEY='atd_v3';
 function loadData(){try{var raw=localStorage.getItem(STORAGE_KEY);if(raw){var d=JSON.parse(raw);employees=d.employees||defaultEmployees();records=d.records||{};}}catch(e){employees=defaultEmployees();records={};}}
 function saveData(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify({employees:employees,records:records}));}catch(e){}}
-function defaultEmployees(){return ['王小明','李小花','張大偉','陳美玲','林志豪'];}
+function defaultEmployees(){return['王小明','李小花','張大偉','陳美玲','林志豪'];}
 var employees=defaultEmployees();var records={};loadData();
 function today(){var n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
 function getRecord(date,id){if(!records[date])records[date]={};if(!records[date][id])records[date][id]={present:false,in:'08:00',out:'17:00',note:''};return records[date][id];}
@@ -168,17 +168,71 @@ document.getElementById('reportEnd').value=today();
 renderAttendance();renderEmpManager();
 function showTab(name){['attend','emp','report','backup'].forEach(function(t){document.getElementById('tab-'+t).style.display=t===name?'':'none';});document.querySelectorAll('.tab').forEach(function(el,i){el.classList.toggle('active',['attend','emp','report','backup'][i]===name);});if(name==='emp')renderEmpManager();if(name==='attend')renderAttendance();}
 function changeDate(delta){var inp=document.getElementById('currentDate');var d=new Date(inp.value+'T00:00:00');d.setDate(d.getDate()+delta);inp.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');renderAttendance();}
-function renderAttendance(){var date=document.getElementById('currentDate').value;var list=document.getElementById('attendanceList');if(employees.length===0){list.innerHTML='<div class="empty-hint">請先至員工名單新增員工</div>';return;}list.innerHTML=employees.map(function(name,i){var r=getRecord(date,i);return '<div class="emp-card '+(r.present?'present':'')+'">'+'<div class="emp-top">'+'<button class="check-btn '+(r.present?'checked':'')+'" onclick="togglePresent(\''+date+'\','+i+')">'+(r.present?'✓':'')+'</button>'+'<div class="emp-name">'+name+'</div>'+'<span class="emp-status '+(r.present?'present':'absent')+'">'+(r.present?'出勤':'缺勤')+'</span>'+'</div>'+'<div class="time-row">'+'<div class="time-field"><label>上班</label><input type="time" value="'+r.in+'" onchange="updateTime(\''+date+'\','+i+',\'in\',this.value)" '+(r.present?'':'disabled')+'></div>'+'<div class="time-field"><label>下班</label><input type="time" value="'+r.out+'" onchange="updateTime(\''+date+'\','+i+',\'out\',this.value)" '+(r.present?'':'disabled')+'></div>'+'</div>'+'<textarea class="note-input" rows="1" placeholder="備註" onchange="updateNote(\''+date+'\','+i+',this.value)">'+r.note+'</textarea>'+'</div>';}).join('');updateSummary(date);}
+function renderAttendance(){var date=document.getElementById('currentDate').value;var list=document.getElementById('attendanceList');if(employees.length===0){list.innerHTML='<div class="empty-hint">請先至員工名單新增員工</div>';return;}list.innerHTML=employees.map(function(name,i){var r=getRecord(date,i);return'<div class="emp-card '+(r.present?'present':'')+'">'+'<div class="emp-top">'+'<button class="check-btn '+(r.present?'checked':'')+'" onclick="togglePresent(\''+date+'\','+i+')">'+(r.present?'✓':'')+'</button>'+'<div class="emp-name">'+name+'</div>'+'<span class="emp-status '+(r.present?'present':'absent')+'">'+(r.present?'出勤':'缺勤')+'</span>'+'</div>'+'<div class="time-row">'+'<div class="time-field"><label>上班</label><input type="time" value="'+r.in+'" onchange="updateTime(\''+date+'\','+i+',\'in\',this.value)" '+(r.present?'':'disabled')+'></div>'+'<div class="time-field"><label>下班</label><input type="time" value="'+r.out+'" onchange="updateTime(\''+date+'\','+i+',\'out\',this.value)" '+(r.present?'':'disabled')+'></div>'+'</div>'+'<textarea class="note-input" rows="1" placeholder="備註" onchange="updateNote(\''+date+'\','+i+',this.value)">'+r.note+'</textarea>'+'</div>';}).join('');updateSummary(date);}
 function togglePresent(date,idx){var r=getRecord(date,idx);r.present=!r.present;saveData();renderAttendance();}
 function updateTime(date,idx,key,val){getRecord(date,idx)[key]=val;saveData();}
 function updateNote(date,idx,val){getRecord(date,idx).note=val;saveData();}
 function updateSummary(date){var t=employees.length,p=0;employees.forEach(function(_,i){if(getRecord(date,i).present)p++;});document.getElementById('s-total').textContent=t;document.getElementById('s-present').textContent=p;document.getElementById('s-absent').textContent=t-p;}
-function renderEmpManager(){var w=document.getElementById('empListManage');if(employees.length===0){w.innerHTML='<div class="empty-hint">尚無員工</div>';return;}w.innerHTML=employees.map(function(name,i){return '<div class="emp-row-manage"><div class="emp-row-num">'+(i+1)+'</div><input class="emp-row-name-input" value="'+name+'" onchange="renameEmployee('+i+',this.value)"><button class="btn-del" onclick="deleteEmployee('+i+')">刪除</button></div>';}).join('');}
+function renderEmpManager(){var w=document.getElementById('empListManage');if(employees.length===0){w.innerHTML='<div class="empty-hint">尚無員工</div>';return;}w.innerHTML=employees.map(function(name,i){return'<div class="emp-row-manage"><div class="emp-row-num">'+(i+1)+'</div><input class="emp-row-name-input" value="'+name+'" onchange="renameEmployee('+i+',this.value)"><button class="btn-del" onclick="deleteEmployee('+i+')">刪除</button></div>';}).join('');}
 function addEmployee(){var inp=document.getElementById('newEmpName');var name=inp.value.trim();if(!name)return;employees.push(name);inp.value='';saveData();renderEmpManager();}
 function renameEmployee(i,name){if(name.trim()){employees[i]=name.trim();saveData();}}
 function deleteEmployee(i){if(!confirm('確定刪除「'+employees[i]+'」？'))return;employees.splice(i,1);saveData();renderEmpManager();}
-function generateReport(){var start=document.getElementById('reportStart').value;var end=document.getElementById('reportEnd').value;if(!start||!end||start>end){alert('請選擇正確日期區間');return;}var days=[],cur=new Date(start+'T00:00:00'),last=new Date(end+'T00:00:00');while(cur<=last){days.push(cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0'));cur.setDate(cur.getDate()+1);}document.getElementById('printDateRange').textContent=start+' ～ '+end;var thead='<tr><th>姓名</th>'+days.map(function(d){return '<th>'+d.slice(5)+'</th>';}).join('')+'<th>出勤天數</th><th>出勤率</th></tr>';var tbody=employees.map(function(name,i){var count=0;var cells=days.map(function(d){var r=getRecord(d,i);if(r.present){count++;return '<td class="td-present">✓<br><span style="font-size:11px">'+r.in+'-'+r.out+'</span></td>';}return '<td class="td-absent">—</td>';}).join('');var rate=Math.round(count/days.length*100);return '<tr><td style="text-align:left;padding-left:12px">'+name+'</td>'+cells+'<td><strong>'+count+'</strong></td><td>'+rate+'%</td></tr>';}).join('');document.getElementById('reportWrap').innerHTML='<table><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table>';}
-function exportImage(){var wrap=document.getElementById('reportWrap');if(wrap.querySelector('.empty-hint')){alert('請先產生報表再存圖');return;}var start=document.getElementById('reportStart').value;var end=document.getElementById('reportEnd').value;html2canvas(wrap,{backgroundColor:'#fffef9',scale:2}).then(function(canvas){var a=document.createElement('a');a.download='出勤報表-'+start+'-'+end+'.png';a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();document.body.removeChild(a);});}
+function generateReport(){var start=document.getElementById('reportStart').value;var end=document.getElementById('reportEnd').value;if(!start||!end||start>end){alert('請選擇正確日期區間');return;}var days=[],cur=new Date(start+'T00:00:00'),last=new Date(end+'T00:00:00');while(cur<=last){days.push(cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0'));cur.setDate(cur.getDate()+1);}document.getElementById('printDateRange').textContent=start+' ～ '+end;var thead='<tr><th>姓名</th>'+days.map(function(d){return'<th>'+d.slice(5)+'</th>';}).join('')+'<th>出勤天數</th><th>出勤率</th></tr>';var tbody=employees.map(function(name,i){var count=0;var cells=days.map(function(d){var r=getRecord(d,i);if(r.present){count++;return'<td class="td-present">✓<br><span style="font-size:11px">'+r.in+'-'+r.out+'</span></td>';}return'<td class="td-absent">—</td>';}).join('');var rate=Math.round(count/days.length*100);return'<tr><td style="text-align:left;padding-left:12px">'+name+'</td>'+cells+'<td><strong>'+count+'</strong></td><td>'+rate+'%</td></tr>';}).join('');document.getElementById('reportWrap').innerHTML='<table><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table>';}
+function getDays(start,end){var days=[],cur=new Date(start+'T00:00:00'),last=new Date(end+'T00:00:00');while(cur<=last){days.push(cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0'));cur.setDate(cur.getDate()+1);}return days;}
+function exportImage(mode){
+  var start=document.getElementById('reportStart').value;
+  var end=document.getElementById('reportEnd').value;
+  if(!start||!end){alert('請先選擇日期區間');return;}
+  var days=getDays(start,end);
+  if(mode==='simple'){
+    var pw=420,rowH=50,ph=80+employees.length*rowH;
+    var c=document.createElement('canvas');c.width=pw;c.height=ph;
+    var ctx=c.getContext('2d');
+    ctx.fillStyle='#fffef9';ctx.fillRect(0,0,pw,ph);
+    ctx.fillStyle='#1a1710';ctx.font='bold 17px serif';ctx.textAlign='center';
+    ctx.fillText('出勤統計　'+start+' ～ '+end,pw/2,38);
+    ctx.fillStyle='#d4cfc8';ctx.fillRect(16,54,pw-32,1);
+    employees.forEach(function(name,i){
+      var count=0;days.forEach(function(d){if(getRecord(d,i).present)count++;});
+      var rate=Math.round(count/days.length*100);
+      var y=64+i*rowH;
+      ctx.fillStyle=i%2===0?'#f7f4ef':'#fffef9';ctx.fillRect(0,y,pw,rowH);
+      ctx.fillStyle='#1a1710';ctx.font='15px serif';ctx.textAlign='left';ctx.fillText(name,24,y+30);
+      ctx.fillStyle=count>0?'#2c7a4b':'#9a9590';ctx.font='bold 15px serif';ctx.textAlign='right';
+      ctx.fillText(count+'天　'+rate+'%',pw-24,y+30);
+    });
+    var a=document.createElement('a');a.download='出勤簡表-'+start+'-'+end+'.png';a.href=c.toDataURL('image/png');document.body.appendChild(a);a.click();document.body.removeChild(a);
+  } else {
+    var pw2=440,cardH=56+days.length*26,gap=14;
+    var ph2=70+employees.length*(cardH+gap);
+    var c2=document.createElement('canvas');c2.width=pw2;c2.height=ph2;
+    var ctx2=c2.getContext('2d');
+    ctx2.fillStyle='#f7f4ef';ctx2.fillRect(0,0,pw2,ph2);
+    ctx2.fillStyle='#1a1710';ctx2.font='bold 17px serif';ctx2.textAlign='center';
+    ctx2.fillText('出勤明細　'+start+' ～ '+end,pw2/2,38);
+    employees.forEach(function(name,i){
+      var count=0;
+      var y0=56+i*(cardH+gap);
+      ctx2.fillStyle='#fffef9';ctx2.strokeStyle='#d4cfc8';ctx2.lineWidth=1.5;
+      ctx2.beginPath();ctx2.rect(12,y0,pw2-24,cardH);ctx2.fill();ctx2.stroke();
+      ctx2.fillStyle='#2c7a4b';ctx2.fillRect(12,y0,4,cardH);
+      ctx2.fillStyle='#1a1710';ctx2.font='bold 15px serif';ctx2.textAlign='left';
+      ctx2.fillText(name,26,y0+24);
+      days.forEach(function(d,j){
+        var r=getRecord(d,i);if(r.present)count++;
+        var dy=y0+42+j*26;
+        ctx2.fillStyle=r.present?'#e8f5ee':'#f7f4ef';ctx2.fillRect(16,dy-14,pw2-32,24);
+        ctx2.fillStyle='#666';ctx2.font='12px serif';ctx2.textAlign='left';
+        ctx2.fillText(d.slice(5),24,dy+4);
+        if(r.present){ctx2.fillStyle='#2c7a4b';ctx2.fillText('✓ '+r.in+'-'+r.out+(r.note?' ('+r.note+')':''),80,dy+4);}
+        else{ctx2.fillStyle='#aaa';ctx2.fillText('缺勤',80,dy+4);}
+      });
+      ctx2.fillStyle='#1a1710';ctx2.font='bold 13px serif';ctx2.textAlign='right';
+      ctx2.fillText(count+'/'+days.length+'天 '+Math.round(count/days.length*100)+'%',pw2-20,y0+24);
+    });
+    var a2=document.createElement('a');a2.download='出勤明細-'+start+'-'+end+'.png';a2.href=c2.toDataURL('image/png');document.body.appendChild(a2);a2.click();document.body.removeChild(a2);
+  }
+}
 function exportBackup(){var data=JSON.stringify({employees:employees,records:records},null,2);var blob=new Blob([data],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='attendance-backup-'+today()+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}
 function importBackup(input){var file=input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(e){try{var d=JSON.parse(e.target.result);if(!d.employees||!d.records){alert('格式錯誤');return;}employees=d.employees;records=d.records;saveData();alert('匯入成功！共'+employees.length+'位員工');renderAttendance();renderEmpManager();}catch(err){alert('讀取失敗');}};reader.readAsText(file);input.value='';}
 function clearAll(){if(!confirm('確定要清除所有資料？此動作無法復原！'))return;employees=defaultEmployees();records={};saveData();alert('已清除');renderAttendance();renderEmpManager();}
