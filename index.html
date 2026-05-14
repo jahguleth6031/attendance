@@ -214,7 +214,8 @@ tbody tr:last-child td{border-bottom:none;}
     </div>
     <div style="font-size:11px;color:var(--accent);margin-top:4px;line-height:1.6;">
       勞保個人自付：投保薪資×2.5%　雇主：投保薪資×8.8996%+職災<br>
-      健保個人自付：投保薪資×5.17%×30%×(1+眷屬)　雇主：×5.17%×60%
+      健保個人自付：投保薪資×5.17%×30%×(1+眷屬)　雇主：×5.17%×60%<br>
+      勞退自提撥：使用獨立投保薪資，與勞保無關
     </div>
   </div>
   <div class="section-title">員工勞健保設定</div>
@@ -333,8 +334,17 @@ function migrateSalary(s){
   return{type:s.type||'monthly',base:s.base||0,fixedItems:s.fixedItems||[],stdAmIn:s.stdAmIn||'08:00',stdAmOut:s.stdAmOut||'12:00',stdPmIn:s.stdPmIn||'13:00',stdPmOut:s.stdPmOut||'17:00',otRate:s.otRate||0};
 }
 function migrateInsurance(ins){
-  if(!ins)return{laborEnabled:true,healthEnabled:true,pensionEnabled:false,laborSalary:0,healthSalary:0,dependents:0,pensionRate:0};
-  return{laborEnabled:ins.laborEnabled!==undefined?ins.laborEnabled:true,healthEnabled:ins.healthEnabled!==undefined?ins.healthEnabled:true,pensionEnabled:ins.pensionEnabled!==undefined?ins.pensionEnabled:false,laborSalary:ins.laborSalary||0,healthSalary:ins.healthSalary||0,dependents:ins.dependents||0,pensionRate:ins.pensionRate||0};
+  if(!ins)return{laborEnabled:true,healthEnabled:true,pensionEnabled:false,laborSalary:0,healthSalary:0,dependents:0,pensionRate:0,pensionSalary:0};
+  return{
+    laborEnabled:ins.laborEnabled!==undefined?ins.laborEnabled:true,
+    healthEnabled:ins.healthEnabled!==undefined?ins.healthEnabled:true,
+    pensionEnabled:ins.pensionEnabled!==undefined?ins.pensionEnabled:false,
+    laborSalary:ins.laborSalary||0,
+    healthSalary:ins.healthSalary||0,
+    dependents:ins.dependents||0,
+    pensionRate:ins.pensionRate||0,
+    pensionSalary:ins.pensionSalary||ins.laborSalary||0
+  };
 }
 
 function loadData(){
@@ -498,7 +508,7 @@ function renderInsuranceList(){
     var hg=getHealthGrade(ins.healthSalary);
     var lc=calcLabor(lg);
     var hc=calcHealth(hg,ins.dependents);
-    var pension=calcPension(ins.laborSalary,ins.pensionRate);
+    var pension=calcPension(ins.pensionSalary,ins.pensionRate);
     var laborHtml=ins.laborEnabled?
       '<div class="ins-row"><label>投保薪資</label><input class="inp inp-md" type="number" value="'+ins.laborSalary+'" onchange="updateIns('+i+',\'laborSalary\',this.value)"><span class="ins-grade">級距：'+lg.toLocaleString()+'</span></div>'
       +'<table class="ins-table"><tr><th></th><th>普通事故</th><th>職災('+companyDisasterRate+'%)</th><th>就業保險</th><th>小計</th></tr>'
@@ -510,7 +520,8 @@ function renderInsuranceList(){
       +'<div class="ins-row"><label>眷屬人數</label><input class="inp inp-sm" type="number" value="'+ins.dependents+'" min="0" onchange="updateIns('+i+',\'dependents\',this.value)"></div>'
       +'<div class="ins-row"><label>　員工自付</label><span style="color:var(--absent);">'+hc.emp.toLocaleString()+' 元</span><label style="margin-left:12px;">雇主</label><span style="color:var(--accent);">'+hc.employer.toLocaleString()+' 元</span></div>':'';
     var pensionHtml=ins.pensionEnabled?
-      '<div class="ins-row"><label>自提撥比率</label><input class="inp inp-sm" type="number" value="'+ins.pensionRate+'" min="0" max="6" onchange="updateIns('+i+',\'pensionRate\',this.value)"><span style="font-size:12px;color:var(--ink-faint);">%（0-6%）</span></div>'
+      '<div class="ins-row"><label>提撥薪資</label><input class="inp inp-md" type="number" value="'+ins.pensionSalary+'" onchange="updateIns('+i+',\'pensionSalary\',this.value)"><span style="font-size:12px;color:var(--ink-faint);">（獨立設定）</span></div>'
+      +'<div class="ins-row"><label>自提撥比率</label><input class="inp inp-sm" type="number" value="'+ins.pensionRate+'" min="0" max="6" onchange="updateIns('+i+',\'pensionRate\',this.value)"><span style="font-size:12px;color:var(--ink-faint);">%（0-6%）</span></div>'
       +'<div class="ins-row"><label>　自提撥金額</label><span style="color:var(--absent);">'+pension.toLocaleString()+' 元／月</span></div>':'';
     return'<div class="card"><div class="emp-salary-name">'+name+'</div>'
       +'<div class="toggle-row"><label>勞保</label><button class="toggle-btn '+(ins.laborEnabled?'on':'off')+'" onclick="toggleIns('+i+',\'laborEnabled\')"></button></div>'+laborHtml
@@ -535,15 +546,15 @@ function renderChangeItemList(){
 function addChangeItem(){var name=document.getElementById('newChangeName').value.trim();var type=document.getElementById('newChangeType').value;if(!name){alert('請輸入項目名稱');return;}if(!changeItems.items)changeItems.items=[];changeItems.items.push({name:name,type:type,amounts:{}});document.getElementById('newChangeName').value='';saveData();renderChangeItemList();}
 function removeChangeItem(idx){if(!confirm('確定刪除？'))return;changeItems.items.splice(idx,1);saveData();renderChangeItemList();}
 function updateChangeAmount(idx,empIdx,val){if(!changeItems.items[idx].amounts)changeItems.items[idx].amounts={};changeItems.items[idx].amounts[empIdx]=parseInt(val)||0;saveData();}
-</script>
-<script>
+  </script>
+  <script>
 function calcEmpPay(i,days,forceDeductIns){
   var useDeduct=forceDeductIns!==undefined?forceDeductIns:deductInsurance;
   var s=getSalary(i);var ins=getInsurance(i);
   var lg=getLaborGrade(ins.laborSalary);var hg=getHealthGrade(ins.healthSalary);
   var lc=ins.laborEnabled?calcLabor(lg):{emp:0,employer:0,disasterAmt:0};
   var hc=ins.healthEnabled?calcHealth(hg,ins.dependents):{emp:0,employer:0};
-  var pension=ins.pensionEnabled?calcPension(ins.laborSalary,ins.pensionRate):0;
+  var pension=ins.pensionEnabled?calcPension(ins.pensionSalary,ins.pensionRate):0;
   var attendDays=0,totalOTHours=0,totalOTPay=0;
   days.forEach(function(d){var r=getRecord(d,i);if(r.present){attendDays++;var ot=calcOT(r,s);totalOTHours+=ot.totalOT;totalOTPay+=ot.totalPay;}});
   var basePay=s.type==='monthly'?s.base:s.base*attendDays;
