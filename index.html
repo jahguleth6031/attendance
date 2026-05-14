@@ -123,14 +123,16 @@ tbody tr:last-child td{border-bottom:none;}
 .ins-deduct-banner{background:var(--warn-bg);border:1.5px solid var(--warn);border-radius:4px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--warn);display:none;}
 .ins-deduct-banner.active{display:block;}
 .batch-panel{background:var(--accent-bg);border:1.5px solid var(--accent);border-radius:4px;padding:12px;margin-bottom:8px;}
-.batch-panel .batch-title{font-size:13px;color:var(--accent);font-weight:500;margin-bottom:8px;}
-.batch-check-row{display:flex;align-items:center;gap:8px;padding:4px 0;}
-.batch-check-row input[type=checkbox]{width:18px;height:18px;cursor:pointer;}
-.batch-check-row label{font-size:14px;cursor:pointer;}
 .emp-check-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);}
 .emp-check-row:last-child{border-bottom:none;}
 .emp-check-row input[type=checkbox]{width:18px;height:18px;cursor:pointer;flex-shrink:0;}
 .emp-check-row label{font-size:14px;flex:1;cursor:pointer;}
+.preview-area{background:var(--paper);border:1.5px solid var(--border);border-radius:4px;padding:14px;margin-top:12px;}
+.preview-simple-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:15px;}
+.preview-simple-row:last-child{border-bottom:none;}
+.preview-simple-name{font-weight:500;}
+.preview-simple-days{color:var(--present);font-weight:700;font-size:18px;}
+.preview-simple-ot{font-size:12px;color:var(--warn);margin-top:2px;}
 @media print{
   body{margin:0;padding:0;background:#fff;}
   .no-print{display:none!important;}
@@ -264,24 +266,25 @@ tbody tr:last-child td{border-bottom:none;}
         <label>～</label>
         <input type="date" class="inp" id="reportEnd">
       </div>
-      <div style="font-size:12px;color:var(--ink-faint);margin-bottom:8px;">選擇要產生報表的員工：</div>
+      <div style="font-size:12px;color:var(--ink-faint);margin-bottom:8px;">選擇員工：</div>
       <div id="reportEmpChecks" style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px;margin-bottom:10px;max-height:200px;overflow-y:auto;"></div>
-      <div class="card-row" style="gap:6px;margin-bottom:8px;">
+      <div class="card-row" style="gap:6px;margin-bottom:10px;">
         <button class="btn-sm btn-primary" onclick="selectAllReportEmp(true)" style="flex:1;">全選</button>
         <button class="btn-sm" style="flex:1;background:var(--bg);border:1px solid var(--border);" onclick="selectAllReportEmp(false)">全不選</button>
       </div>
-      <div class="card-row" style="gap:6px;">
+      <div class="card-row" style="gap:6px;margin-bottom:10px;">
         <label style="min-width:0;font-size:12px;">含薪資紀錄</label>
         <input type="checkbox" id="reportIncludeSalary" style="width:18px;height:18px;">
       </div>
-      <div class="card-row" style="gap:8px;margin-top:8px;">
-        <button class="btn-sm btn-primary" style="flex:1;padding:9px;" onclick="generatePersonalReport()">產生報表</button>
-        <button class="btn-sm btn-green" style="flex:1;padding:9px;" onclick="window.print()">列印／存PDF</button>
-        <button class="btn-img" onclick="exportImage('simple')" style="background:#2c7a4b;flex:1;padding:9px;">📊 簡表圖</button>
-        <button class="btn-img" onclick="exportImage('detail')" style="background:#1a6b8a;flex:1;padding:9px;">📋 明細圖</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-sm btn-primary" style="flex:1;padding:10px;" onclick="generatePersonalReport()">出勤報表</button>
+        <button class="btn-sm" style="flex:1;padding:10px;background:#2c7a4b;color:#fff;border:none;border-radius:3px;font-family:inherit;font-size:12px;cursor:pointer;" onclick="previewSimpleReport()">出勤簡表</button>
       </div>
     </div>
     <div id="reportWrap"><div class="empty-hint">請選擇員工與日期區間後產生報表</div></div>
+    <div id="simplePrintBar" style="display:none;" class="no-print">
+      <button class="btn-sm btn-green" style="width:100%;padding:12px;font-size:14px;" onclick="window.print()">列印／存PDF</button>
+    </div>
   </div>
 </div>
 <div id="tab-cost" style="display:none">
@@ -522,40 +525,21 @@ function renderInsuranceList(){
 function updateIns(i,key,val){getInsurance(i)[key]=parseInt(val)||0;saveData();renderInsuranceList();}
 function toggleIns(i,key){var ins=getInsurance(i);ins[key]=!ins[key];saveData();renderInsuranceList();}
 
-// ── 異動頁：批次加入 ──
 var batchTarget=-1;
 function showBatchPanel(idx){
-  batchTarget=idx;
   var item=changeItems.items[idx];
   var w=document.getElementById('batchPanel-'+idx);
   if(w.style.display==='none'||!w.style.display){
-    w.innerHTML='<div class="batch-title">選擇要加入此異動的員工：</div>'
-      +employees.map(function(name,i){
-        return'<div class="emp-check-row">'
-          +'<input type="checkbox" id="bc-'+idx+'-'+i+'" '+(item.amounts&&item.amounts[i]?'checked':'')+'>'
-          +'<label for="bc-'+idx+'-'+i+'">'+name+'</label>'
-          +'</div>';
-      }).join('')
-      +'<div style="display:flex;gap:8px;margin-top:10px;">'
-      +'<button class="btn-sm btn-primary" style="flex:1;" onclick="applyBatch('+idx+')">確認加入</button>'
-      +'<button class="btn-sm" style="flex:1;background:var(--bg);border:1px solid var(--border);" onclick="closeBatch('+idx+')">取消</button>'
-      +'</div>';
+    w.innerHTML='<div style="font-size:13px;color:var(--accent);font-weight:500;margin-bottom:8px;">選擇要加入此異動的員工：</div>'
+      +employees.map(function(name,i){return'<div class="emp-check-row"><input type="checkbox" id="bc-'+idx+'-'+i+'" '+(item.amounts&&item.amounts[i]!==undefined?'checked':'')+'><label for="bc-'+idx+'-'+i+'">'+name+'</label></div>';}).join('')
+      +'<div style="display:flex;gap:8px;margin-top:10px;"><button class="btn-sm btn-primary" style="flex:1;" onclick="applyBatch('+idx+')">確認加入</button><button class="btn-sm" style="flex:1;background:var(--bg);border:1px solid var(--border);" onclick="closeBatch('+idx+')">取消</button></div>';
     w.style.display='block';
-  } else {
-    w.style.display='none';
-  }
+  }else{w.style.display='none';}
 }
 function applyBatch(idx){
-  var item=changeItems.items[idx];
-  if(!item.amounts)item.amounts={};
-  employees.forEach(function(_,i){
-    var cb=document.getElementById('bc-'+idx+'-'+i);
-    if(cb&&cb.checked&&!item.amounts[i]){item.amounts[i]=0;}
-    if(cb&&!cb.checked){delete item.amounts[i];}
-  });
-  saveData();
-  document.getElementById('batchPanel-'+idx).style.display='none';
-  renderChangeItemList();
+  var item=changeItems.items[idx];if(!item.amounts)item.amounts={};
+  employees.forEach(function(_,i){var cb=document.getElementById('bc-'+idx+'-'+i);if(cb&&cb.checked&&item.amounts[i]===undefined){item.amounts[i]=0;}if(cb&&!cb.checked){delete item.amounts[i];}});
+  saveData();document.getElementById('batchPanel-'+idx).style.display='none';renderChangeItemList();
 }
 function closeBatch(idx){document.getElementById('batchPanel-'+idx).style.display='none';}
 
@@ -566,18 +550,11 @@ function renderChangeItemList(){
     var empRows=Object.keys(item.amounts||{}).map(function(iStr){
       var i=parseInt(iStr);if(i>=employees.length)return'';
       var val=item.amounts[i]||0;
-      return'<div class="ins-row"><label style="min-width:70px;">'+employees[i]+'</label>'
-        +'<input class="inp inp-md" type="number" value="'+val+'" placeholder="0" onchange="updateChangeAmount('+idx+','+i+',this.value)">'
-        +'<span style="font-size:12px;color:var(--ink-faint);">元</span></div>';
+      return'<div class="ins-row"><label style="min-width:70px;">'+employees[i]+'</label><input class="inp inp-md" type="number" value="'+val+'" placeholder="0" onchange="updateChangeAmount('+idx+','+i+',this.value)"><span style="font-size:12px;color:var(--ink-faint);">元</span></div>';
     }).join('');
     if(!empRows)empRows='<div style="font-size:12px;color:var(--ink-faint);padding:6px 0;">尚未加入任何員工，請點「批次加入」</div>';
-    return'<div class="card">'
-      +'<div class="row-between"><div style="font-size:15px;font-weight:500;">'+item.name
-      +'<span style="font-size:12px;color:'+(item.type==='add'?'var(--present)':'var(--absent)')+';margin-left:8px;">'+(item.type==='add'?'▲應付':'▼應扣')+'</span></div>'
-      +'<div style="display:flex;gap:6px;">'
-      +'<button class="btn-sm btn-accent" onclick="showBatchPanel('+idx+')">批次加入</button>'
-      +'<button class="btn-sm btn-red" onclick="removeChangeItem('+idx+')">刪除</button>'
-      +'</div></div>'
+    return'<div class="card"><div class="row-between"><div style="font-size:15px;font-weight:500;">'+item.name+'<span style="font-size:12px;color:'+(item.type==='add'?'var(--present)':'var(--absent)')+';margin-left:8px;">'+(item.type==='add'?'▲應付':'▼應扣')+'</span></div>'
+      +'<div style="display:flex;gap:6px;"><button class="btn-sm btn-accent" onclick="showBatchPanel('+idx+')">批次加入</button><button class="btn-sm btn-red" onclick="removeChangeItem('+idx+')">刪除</button></div></div>'
       +'<div class="batch-panel" id="batchPanel-'+idx+'" style="display:none;margin-top:8px;"></div>'
       +'<div class="divider"></div>'+empRows+'</div>';
   }).join('');
@@ -586,31 +563,12 @@ function addChangeItem(){var name=document.getElementById('newChangeName').value
 function removeChangeItem(idx){if(!confirm('確定刪除？'))return;changeItems.items.splice(idx,1);saveData();renderChangeItemList();}
 function updateChangeAmount(idx,empIdx,val){if(!changeItems.items[idx].amounts)changeItems.items[idx].amounts={};changeItems.items[idx].amounts[empIdx]=parseInt(val)||0;saveData();}
 
-// ── 報表：員工勾選 ──
 function renderReportEmpChecks(){
-  var w=document.getElementById('reportEmpChecks');
-  if(!w)return;
-  w.innerHTML=employees.map(function(name,i){
-    return'<div class="emp-check-row">'
-      +'<input type="checkbox" id="rep-emp-'+i+'" checked>'
-      +'<label for="rep-emp-'+i+'">'+name+'</label>'
-      +'</div>';
-  }).join('');
+  var w=document.getElementById('reportEmpChecks');if(!w)return;
+  w.innerHTML=employees.map(function(name,i){return'<div class="emp-check-row"><input type="checkbox" id="rep-emp-'+i+'" checked><label for="rep-emp-'+i+'">'+name+'</label></div>';}).join('');
 }
-function selectAllReportEmp(val){
-  employees.forEach(function(_,i){
-    var cb=document.getElementById('rep-emp-'+i);
-    if(cb)cb.checked=val;
-  });
-}
-function getSelectedReportEmps(){
-  var sel=[];
-  employees.forEach(function(_,i){
-    var cb=document.getElementById('rep-emp-'+i);
-    if(cb&&cb.checked)sel.push(i);
-  });
-  return sel;
-}
+function selectAllReportEmp(val){employees.forEach(function(_,i){var cb=document.getElementById('rep-emp-'+i);if(cb)cb.checked=val;});}
+function getSelectedReportEmps(){var sel=[];employees.forEach(function(_,i){var cb=document.getElementById('rep-emp-'+i);if(cb&&cb.checked)sel.push(i);});return sel;}
 </script>
 <script>
 function calcEmpPay(i,days,forceDeductIns){
@@ -693,60 +651,30 @@ function generatePersonalReport(){
       +salaryHtml+'</div>';
   });
   document.getElementById('reportWrap').innerHTML=html;
+  document.getElementById('simplePrintBar').style.display='block';
 }
 
-function exportImage(mode){
+function previewSimpleReport(){
   var selEmps=getSelectedReportEmps();
   var start=document.getElementById('reportStart').value;var end=document.getElementById('reportEnd').value;
-  if(selEmps.length===0||!start||!end){alert('請先選擇員工與日期區間');return;}
+  if(selEmps.length===0||!start||!end||start>end){alert('請選擇員工與正確日期區間');return;}
   var days=getDays(start,end);
-
-  if(mode==='simple'){
-    var pw=420,rowH=52,headerH=70,footerH=10;
-    var ph=headerH+selEmps.length*rowH+footerH;
-    var c=document.createElement('canvas');c.width=pw;c.height=ph;
-    var ctx=c.getContext('2d');
-    ctx.fillStyle='#fffef9';ctx.fillRect(0,0,pw,ph);
-    ctx.fillStyle='#1a1710';ctx.font='bold 17px serif';ctx.textAlign='center';
-    ctx.fillText('出勤統計',pw/2,32);
-    ctx.font='13px serif';ctx.fillStyle='#666';ctx.fillText(start+' ～ '+end,pw/2,52);
-    ctx.fillStyle='#d4cfc8';ctx.fillRect(16,62,pw-32,1);
-    selEmps.forEach(function(empIdx,j){
-      var count=0,otH=0;
-      days.forEach(function(d){var r=getRecord(d,empIdx);if(r.present){count++;otH+=calcOT(r,getSalary(empIdx)).totalOT;}});
-      var y=headerH+j*rowH;
-      ctx.fillStyle=j%2===0?'#f7f4ef':'#fffef9';ctx.fillRect(0,y,pw,rowH);
-      ctx.fillStyle='#1a1710';ctx.font='15px serif';ctx.textAlign='left';
-      ctx.fillText(employees[empIdx],20,y+22);
-      ctx.fillStyle=count>0?'#2c7a4b':'#9a9590';ctx.font='bold 15px serif';ctx.textAlign='right';
-      ctx.fillText(count+' 天',pw-20,y+22);
-      if(otH>0){ctx.fillStyle='#e67e22';ctx.font='12px serif';ctx.fillText('加班 '+otH+' hr',pw-20,y+40);}
-      ctx.fillStyle='#e8e4de';ctx.fillRect(16,y+rowH-1,pw-32,1);
-    });
-    var a=document.createElement('a');a.download='出勤統計-'+start+'-'+end+'.png';a.href=c.toDataURL('image/png');document.body.appendChild(a);a.click();document.body.removeChild(a);
-
-  }else{
-    selEmps.forEach(function(empIdx){
-      var name=employees[empIdx];
-      var pw2=460,rowH2=26,ph2=100+days.length*rowH2;
-      var c2=document.createElement('canvas');c2.width=pw2;c2.height=ph2;
-      var ctx2=c2.getContext('2d');
-      ctx2.fillStyle='#f7f4ef';ctx2.fillRect(0,0,pw2,ph2);
-      ctx2.fillStyle='#1a1710';ctx2.font='bold 16px serif';ctx2.textAlign='center';
-      ctx2.fillText(name+'　出勤明細',pw2/2,32);
-      ctx2.font='12px serif';ctx2.fillStyle='#666';ctx2.fillText(start+' ～ '+end,pw2/2,52);
-      days.forEach(function(d,j){
-        var r=getRecord(d,empIdx);var ot=r.present?calcOT(r,getSalary(empIdx)):{totalOT:0};
-        var y=72+j*rowH2;
-        ctx2.fillStyle=r.present?'#e8f5ee':'#f7f4ef';ctx2.fillRect(8,y,pw2-16,rowH2-2);
-        ctx2.fillStyle=r.present?'#2c7a4b':'#aaa';ctx2.font='12px serif';ctx2.textAlign='left';
-        ctx2.fillText(d.slice(5),16,y+17);
-        if(r.present){ctx2.fillStyle='#1a1710';ctx2.fillText(r.amIn+'-'+r.amOut+'　'+r.pmIn+'-'+r.pmOut,70,y+17);if(ot.totalOT>0){ctx2.fillStyle='#e67e22';ctx2.fillText('+'+ot.totalOT+'hr',360,y+17);}}
-        else{ctx2.fillText('缺勤',70,y+17);}
-      });
-      var a2=document.createElement('a');a2.download=name+'-明細-'+start+'.png';a2.href=c2.toDataURL('image/png');document.body.appendChild(a2);a2.click();document.body.removeChild(a2);
-    });
-  }
+  var rows=selEmps.map(function(empIdx){
+    var count=0,otH=0;
+    days.forEach(function(d){var r=getRecord(d,empIdx);if(r.present){count++;otH+=calcOT(r,getSalary(empIdx)).totalOT;}});
+    return'<div class="preview-simple-row">'
+      +'<div><div class="preview-simple-name">'+employees[empIdx]+'</div>'
+      +(otH>0?'<div class="preview-simple-ot">加班 '+otH+' 小時</div>':'')
+      +'</div>'
+      +'<div class="preview-simple-days">'+count+' 天</div>'
+      +'</div>';
+  }).join('');
+  document.getElementById('reportWrap').innerHTML=
+    '<div class="preview-area">'
+    +'<div style="font-size:15px;font-weight:700;margin-bottom:4px;letter-spacing:2px;">出勤簡表</div>'
+    +'<div style="font-size:12px;color:var(--ink-faint);margin-bottom:12px;">'+start+' ～ '+end+'</div>'
+    +rows+'</div>';
+  document.getElementById('simplePrintBar').style.display='block';
 }
 
 function renderCostYearSelect(){
@@ -798,4 +726,4 @@ function clearAll(){
 }
 </script>
 </body>
-</html> 
+</html>
