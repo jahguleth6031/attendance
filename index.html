@@ -645,7 +645,7 @@ function generatePayslip(){
     var p=calcEmpPay(i,days);totalCost+=p.netPay;
     var addHtml=p.addItems.map(function(r){return'<div class="ps-row"><span>'+r.name+'</span><span>'+r.amount.toLocaleString()+'</span></div>';}).join('');
     var deductHtml=p.deductItems.map(function(r){return'<div class="ps-row"><span>'+r.name+'</span><span>-'+r.amount.toLocaleString()+'</span></div>';}).join('');
-    var employerHtml=(p.laborEnabled?'<div class="ps-row employer"><span>雇主負擔勞保</span><span>'+p.laborEmployer.toLocaleString()+'</span></div>':'')+(p.healthEnabled?'<div class="ps-row employer"><span>雇主負擔健保</span><span>'+p.healthEmployer.toLocaleString()+'</span></div>':'');
+    var employerHtml=deductInsurance?((p.laborEnabled?'<div class="ps-row employer"><span>雇主負擔勞保</span><span>'+p.laborEmployer.toLocaleString()+'</span></div>':'')+(p.healthEnabled?'<div class="ps-row employer"><span>雇主負擔健保</span><span>'+p.healthEmployer.toLocaleString()+'</span></div>':'')):'' ;
     return'<div class="payslip-cell"><div class="ps-header"><div class="ps-company">'+company+'</div><div class="ps-name">'+name+'</div><div class="ps-period">'+start+' ～ '+end+'</div></div>'
       +'<div class="ps-section-label">▌應付項目</div><div class="ps-row"><span>'+p.baseLabel+'</span><span>'+p.basePay.toLocaleString()+'</span></div>'+addHtml
       +(deductHtml?'<div class="ps-section-label">▌應扣項目</div>'+deductHtml:'')
