@@ -81,6 +81,14 @@ select.inp{padding:5px 6px;}
 .ins-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
 .ins-row label{font-size:12px;color:var(--ink-light);min-width:80px;}
 .ins-grade{font-size:12px;color:var(--ink-faint);margin-left:4px;}
+.toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.toggle-row label{font-size:13px;color:var(--ink);flex:1;}
+.toggle-btn{position:relative;width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;transition:background 0.2s;flex-shrink:0;}
+.toggle-btn.on{background:var(--present);}
+.toggle-btn.off{background:var(--border);}
+.toggle-btn::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;transition:left 0.2s;}
+.toggle-btn.on::after{left:23px;}
+.toggle-btn.off::after{left:3px;}
 .report-panel{display:flex;flex-direction:column;gap:12px;}
 .report-range{display:flex;gap:8px;align-items:center;background:var(--paper);border:1.5px solid var(--border);border-radius:4px;padding:10px 14px;flex-wrap:wrap;}
 .report-range label{font-size:13px;color:var(--ink-light);}
@@ -139,8 +147,6 @@ tbody tr:last-child td{border-bottom:none;}
   <button class="tab" onclick="showTab('cost')">支出統計</button>
   <button class="tab" onclick="showTab('backup')">備份</button>
 </div>
-
-<!-- 出勤 -->
 <div id="tab-attend">
   <div class="date-bar no-print">
     <label>日期：</label>
@@ -157,8 +163,6 @@ tbody tr:last-child td{border-bottom:none;}
   </div>
   <div class="attendance-list" id="attendanceList"></div>
 </div>
-
-<!-- 員工 -->
 <div id="tab-emp" style="display:none">
   <div class="emp-manager">
     <div class="add-emp-row">
@@ -168,8 +172,6 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="emp-list-manage" id="empListManage"></div>
   </div>
 </div>
-
-<!-- 薪資設定 -->
 <div id="tab-salary" style="display:none">
   <div class="section-title">公司名稱</div>
   <div class="card">
@@ -181,16 +183,12 @@ tbody tr:last-child td{border-bottom:none;}
   <div class="section-title">員工薪資設定</div>
   <div id="salaryList"></div>
 </div>
-
-<!-- 異動 -->
 <div id="tab-change" style="display:none">
   <div class="section-title">發薪區間</div>
   <div class="card">
     <div class="card-row">
-      <label>起</label>
-      <input type="date" class="inp" id="payStart">
-      <label>迄</label>
-      <input type="date" class="inp" id="payEnd">
+      <label>起</label><input type="date" class="inp" id="payStart">
+      <label>迄</label><input type="date" class="inp" id="payEnd">
     </div>
   </div>
   <div class="section-title">新增異動項目</div>
@@ -206,21 +204,17 @@ tbody tr:last-child td{border-bottom:none;}
   </div>
   <div id="changeItemList"></div>
 </div>
-
-<!-- 勞健保 -->
 <div id="tab-insurance" style="display:none">
   <div class="section-title">勞健保設定</div>
   <div class="card" style="background:var(--accent-bg);margin-bottom:12px;">
     <div style="font-size:12px;color:var(--accent);line-height:1.8;">
-      💡 輸入投保薪資後系統自動帶入級距。<br>
-      勞保：員工 <strong>2.11%</strong>，雇主 <strong>10.11%</strong>。<br>
-      健保：員工 <strong>5.17%×30%</strong>（眷屬每人+30%），雇主 <strong>5.17%×60%</strong>。
+      💡 勞保：員工 <strong>2.11%</strong>，雇主 <strong>10.11%</strong>。<br>
+      健保：員工 <strong>5.17%×30%</strong>（眷屬每人+30%），雇主 <strong>5.17%×60%</strong>。<br>
+      勞退自提撥：從投保薪資計算，歸入應扣。
     </div>
   </div>
   <div id="insuranceList"></div>
 </div>
-
-<!-- 薪資單 -->
 <div id="tab-payslip" style="display:none">
   <div class="no-print" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
     <div class="card">
@@ -240,8 +234,6 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="payslip-grid" id="payslipGrid"></div>
   </div>
 </div>
-
-<!-- 報表 -->
 <div id="tab-report" style="display:none">
   <div class="report-panel">
     <div class="card no-print">
@@ -251,10 +243,8 @@ tbody tr:last-child td{border-bottom:none;}
         <select class="inp inp-lg" id="reportEmp"></select>
       </div>
       <div class="card-row">
-        <label>起</label>
-        <input type="date" class="inp" id="reportStart">
-        <label>迄</label>
-        <input type="date" class="inp" id="reportEnd">
+        <label>起</label><input type="date" class="inp" id="reportStart">
+        <label>迄</label><input type="date" class="inp" id="reportEnd">
       </div>
       <div class="card-row">
         <label style="min-width:0;font-size:12px;">含薪資紀錄</label>
@@ -263,15 +253,13 @@ tbody tr:last-child td{border-bottom:none;}
       <div class="card-row" style="gap:8px;margin-top:4px;">
         <button class="btn-sm btn-primary" style="flex:1;padding:9px;" onclick="generatePersonalReport()">產生報表</button>
         <button class="btn-sm btn-green" style="flex:1;padding:9px;" onclick="window.print()">列印／存PDF</button>
-        <button class="btn-img" onclick="exportImage('simple')" style="background:#2c7a4b;flex:1;padding:9px;">📊 簡表圖</button>
-        <button class="btn-img" onclick="exportImage('detail')" style="background:#1a6b8a;flex:1;padding:9px;">📋 明細圖</button>
+        <button class="btn-img" onclick="exportImage('simple')" style="background:#2c7a4b;flex:1;padding:9px;">📊 簡表</button>
+        <button class="btn-img" onclick="exportImage('detail')" style="background:#1a6b8a;flex:1;padding:9px;">📋 明細</button>
       </div>
     </div>
     <div id="reportWrap"><div class="empty-hint">請選擇員工與日期區間後產生報表</div></div>
   </div>
 </div>
-
-<!-- 支出統計 -->
 <div id="tab-cost" style="display:none">
   <div class="cost-panel">
     <div class="card no-print">
@@ -285,8 +273,6 @@ tbody tr:last-child td{border-bottom:none;}
     <div id="costReport"><div class="empty-hint">請選擇年份查詢</div></div>
   </div>
 </div>
-
-<!-- 備份 -->
 <div id="tab-backup" style="display:none">
   <div class="backup-panel">
     <div class="backup-card" style="background:var(--present-bg);border-color:var(--present);">
@@ -300,7 +286,7 @@ tbody tr:last-child td{border-bottom:none;}
     </div>
     <div class="backup-card">
       <h3>📥 匯入備份</h3>
-      <p>選擇之前匯出的 .json 備份檔還原資料。⚠️ 匯入後會覆蓋目前資料。</p>
+      <p>選擇之前匯出的 .json 備份檔還原資料。舊版備份也相容。</p>
       <label class="btn-full" style="background:var(--bg);border:1.5px dashed var(--border);display:block;text-align:center;padding:11px;cursor:pointer;color:var(--ink-light);">
         選擇備份檔案
         <input type="file" accept=".json" onchange="importBackup(this)" style="display:none">
@@ -319,15 +305,75 @@ var employees=[],records={},salarySettings={},insuranceSettings={},changeItems={
 
 function defaultEmployees(){return['王小明','李小花','張大偉','陳美玲','林志豪'];}
 
+function migrateRecord(r){
+  if(!r)return{present:false,amIn:'',amOut:'',pmIn:'',pmOut:'',note:''};
+  return{
+    present:r.present||false,
+    amIn:r.amIn||r.in||'',
+    amOut:r.amOut||r.out||'',
+    pmIn:r.pmIn||'',
+    pmOut:r.pmOut||'',
+    note:r.note||''
+  };
+}
+
+function migrateSalary(s){
+  if(!s)return{type:'monthly',base:0,fixedItems:[],stdAmIn:'08:00',stdAmOut:'12:00',stdPmIn:'13:00',stdPmOut:'17:00',otRate:0};
+  return{
+    type:s.type||'monthly',
+    base:s.base||0,
+    fixedItems:s.fixedItems||[],
+    stdAmIn:s.stdAmIn||'08:00',
+    stdAmOut:s.stdAmOut||'12:00',
+    stdPmIn:s.stdPmIn||'13:00',
+    stdPmOut:s.stdPmOut||'17:00',
+    otRate:s.otRate||0
+  };
+}
+
+function migrateInsurance(ins){
+  if(!ins)return{laborEnabled:true,healthEnabled:true,pensionEnabled:false,laborSalary:0,healthSalary:0,dependents:0,pensionRate:0};
+  return{
+    laborEnabled:ins.laborEnabled!==undefined?ins.laborEnabled:true,
+    healthEnabled:ins.healthEnabled!==undefined?ins.healthEnabled:true,
+    pensionEnabled:ins.pensionEnabled!==undefined?ins.pensionEnabled:false,
+    laborSalary:ins.laborSalary||0,
+    healthSalary:ins.healthSalary||0,
+    dependents:ins.dependents||0,
+    pensionRate:ins.pensionRate||0
+  };
+}
+
 function loadData(){
   try{
     var raw=localStorage.getItem(STORAGE_KEY);
     if(raw){
       var d=JSON.parse(raw);
       employees=d.employees||defaultEmployees();
-      records=d.records||{};
-      salarySettings=d.salarySettings||{};
-      insuranceSettings=d.insuranceSettings||{};
+      // 相容舊版 records
+      records={};
+      if(d.records){
+        Object.keys(d.records).forEach(function(date){
+          records[date]={};
+          Object.keys(d.records[date]).forEach(function(idx){
+            records[date][idx]=migrateRecord(d.records[date][idx]);
+          });
+        });
+      }
+      // 相容舊版 salarySettings
+      salarySettings={};
+      if(d.salarySettings){
+        Object.keys(d.salarySettings).forEach(function(i){
+          salarySettings[i]=migrateSalary(d.salarySettings[i]);
+        });
+      }
+      // 相容舊版 insuranceSettings
+      insuranceSettings={};
+      if(d.insuranceSettings){
+        Object.keys(d.insuranceSettings).forEach(function(i){
+          insuranceSettings[i]=migrateInsurance(d.insuranceSettings[i]);
+        });
+      }
       changeItems=d.changeItems||{};
       companyName=d.companyName||'';
       payrollHistory=d.payrollHistory||[];
@@ -347,7 +393,6 @@ function saveData(){
 
 loadData();
 
-// 勞健保
 var laborGrades=[26400,25200,24000,22800,21900,21000,20100,19200,18300,17400,16500,15840,15030,14400,13500,12900,12540,11100,10200,0];
 var healthGrades=[182000,172600,162800,150000,140400,132300,124200,116500,107700,98500,92100,86200,80100,73800,69800,66000,62400,58900,55900,53000,50300,47700,45300,43900,42000,40100,38200,36300,34500,33300,32100,30900,29600,28800,27600,26400,25200,24000,22800,0];
 
@@ -355,11 +400,9 @@ function getLaborGrade(s){for(var i=0;i<laborGrades.length;i++){if(s>=laborGrade
 function getHealthGrade(s){for(var i=0;i<healthGrades.length;i++){if(s>=healthGrades[i])return healthGrades[i];}return healthGrades[healthGrades.length-2];}
 function calcLabor(g){return{emp:Math.round(g*0.0211),employer:Math.round(g*0.1011)};}
 function calcHealth(g,dep){var d=dep||0;return{emp:Math.round(g*0.0517*0.3*(1+d)),employer:Math.round(g*0.0517*0.6)};}
+function calcPension(salary,rate){return Math.round(salary*(rate/100));}
 
-function today(){
-  var n=new Date();
-  return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
-}
+function today(){var n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
 function getDays(start,end){
   var days=[],cur=new Date(start+'T00:00:00'),last=new Date(end+'T00:00:00');
   while(cur<=last){
@@ -370,49 +413,34 @@ function getDays(start,end){
 }
 function getRecord(date,id){
   if(!records[date])records[date]={};
-  if(!records[date][id])records[date][id]={present:false,amIn:'',amOut:'',pmIn:'',pmOut:'',note:''};
+  if(!records[date][id])records[date][id]=migrateRecord(null);
   return records[date][id];
 }
 function getSalary(i){
-  if(!salarySettings[i])salarySettings[i]={type:'monthly',base:0,fixedItems:[],stdAmIn:'08:00',stdAmOut:'12:00',stdPmIn:'13:00',stdPmOut:'17:00',otRate:0};
+  if(!salarySettings[i])salarySettings[i]=migrateSalary(null);
   return salarySettings[i];
 }
 function getInsurance(i){
-  if(!insuranceSettings[i])insuranceSettings[i]={laborSalary:0,healthSalary:0,dependents:0};
+  if(!insuranceSettings[i])insuranceSettings[i]=migrateInsurance(null);
   return insuranceSettings[i];
 }
 
-// 加班計算
-function calcOT(record, salary){
-  if(!record.present) return {amOT:0,pmOT:0,totalOT:0,totalPay:0};
-  var stdAmIn=salary.stdAmIn||'08:00';
-  var stdAmOut=salary.stdAmOut||'12:00';
-  var stdPmIn=salary.stdPmIn||'13:00';
-  var stdPmOut=salary.stdPmOut||'17:00';
-
-  function toMin(t){if(!t)return 0;var p=t.split(':');return parseInt(p[0])*60+parseInt(p[1]);}
+function calcOT(record,salary){
+  if(!record.present)return{amOT:0,pmOT:0,totalOT:0,totalPay:0};
+  function toMin(t){if(!t)return null;var p=t.split(':');return parseInt(p[0])*60+parseInt(p[1]);}
   function otUnits(actual,std,isBefore){
     var a=toMin(actual),s=toMin(std);
-    if(!a)return 0;
+    if(a===null||s===null)return 0;
     var diff=isBefore?(s-a):(a-s);
     if(diff<=0)return 0;
     return Math.ceil(diff/30)*0.5;
   }
-
-  var amOT=0,pmOT=0;
-  // 上午：提早上班 or 超時到下午
-  amOT+=otUnits(record.amIn,stdAmIn,true);
-  amOT+=otUnits(record.amOut,stdAmOut,false);
-  // 下午：提早上班(午休工作) or 超時下班
-  pmOT+=otUnits(record.pmIn,stdPmIn,true);
-  pmOT+=otUnits(record.pmOut,stdPmOut,false);
-
+  var amOT=otUnits(record.amIn,salary.stdAmIn,true)+otUnits(record.amOut,salary.stdAmOut,false);
+  var pmOT=otUnits(record.pmIn,salary.stdPmIn,true)+otUnits(record.pmOut,salary.stdPmOut,false);
   var totalOT=amOT+pmOT;
-  var totalPay=Math.round(totalOT*(salary.otRate||0));
-  return{amOT:amOT,pmOT:pmOT,totalOT:totalOT,totalPay:totalPay};
+  return{amOT:amOT,pmOT:pmOT,totalOT:totalOT,totalPay:Math.round(totalOT*(salary.otRate||0))};
 }
 
-// Init
 document.getElementById('currentDate').value=today();
 var r1=new Date();r1.setMonth(r1.getMonth()-1);r1.setDate(1);
 var defStart=r1.getFullYear()+'-'+String(r1.getMonth()+1).padStart(2,'0')+'-01';
@@ -420,16 +448,13 @@ document.getElementById('ps-start').value=defStart;
 document.getElementById('ps-end').value=today();
 document.getElementById('payStart').value=defStart;
 document.getElementById('payEnd').value=today();
-
-// 報表日期預設半年
 var r6=new Date();r6.setMonth(r6.getMonth()-6);
 document.getElementById('reportStart').value=r6.getFullYear()+'-'+String(r6.getMonth()+1).padStart(2,'0')+'-'+String(r6.getDate()).padStart(2,'0');
 document.getElementById('reportEnd').value=today();
-
-renderAttendance();renderEmpManager();renderSalaryList();renderInsuranceList();renderChangeItemList();renderReportEmpSelect();renderCostYearSelect();
-
 document.getElementById('companyName').value=companyName;
 document.getElementById('companyName').addEventListener('change',function(){companyName=this.value;saveData();});
+
+renderAttendance();renderEmpManager();renderSalaryList();renderInsuranceList();renderChangeItemList();renderReportEmpSelect();renderCostYearSelect();
 
 function showTab(name){
   var tabs=['attend','emp','salary','change','insurance','payslip','report','cost','backup'];
@@ -467,20 +492,16 @@ function renderAttendance(){
       +'<span class="emp-status '+(r.present?'present':'absent')+'">'+(r.present?'出勤':'缺勤')+'</span>'
       +'</div>'
       +(r.present?
-        '<div class="time-section">'
-        +'<div class="time-section-label">上午</div>'
+        '<div class="time-section"><div class="time-section-label">上午</div>'
         +'<div class="time-row">'
         +'<div class="time-field"><label>上班</label><input type="time" class="inp-time" value="'+r.amIn+'" onchange="updateRecord(\''+date+'\','+i+',\'amIn\',this.value)"></div>'
         +'<div class="time-field"><label>下班</label><input type="time" class="inp-time" value="'+r.amOut+'" onchange="updateRecord(\''+date+'\','+i+',\'amOut\',this.value)"></div>'
         +'</div></div>'
-        +'<div class="time-section">'
-        +'<div class="time-section-label">下午</div>'
+        +'<div class="time-section"><div class="time-section-label">下午</div>'
         +'<div class="time-row">'
         +'<div class="time-field"><label>上班</label><input type="time" class="inp-time" value="'+r.pmIn+'" onchange="updateRecord(\''+date+'\','+i+',\'pmIn\',this.value)"></div>'
         +'<div class="time-field"><label>下班</label><input type="time" class="inp-time" value="'+r.pmOut+'" onchange="updateRecord(\''+date+'\','+i+',\'pmOut\',this.value)"></div>'
-        +'</div></div>'
-        +otHtml
-        :'')
+        +'</div></div>'+otHtml:'')
       +'<textarea class="note-input" rows="1" placeholder="備註" onchange="updateRecord(\''+date+'\','+i+',\'note\',this.value)">'+r.note+'</textarea>'
       +'</div>';
   }).join('');
@@ -488,10 +509,9 @@ function renderAttendance(){
 }
 
 function togglePresent(date,idx){
-  var r=getRecord(date,idx);
-  var s=getSalary(idx);
+  var r=getRecord(date,idx);var s=getSalary(idx);
   r.present=!r.present;
-  if(r.present){r.amIn=s.stdAmIn;r.amOut=s.stdAmOut;r.pmIn=s.stdPmIn;r.pmOut=s.stdPmOut;}
+  if(r.present){r.amIn=s.stdAmIn||'08:00';r.amOut=s.stdAmOut||'12:00';r.pmIn=s.stdPmIn||'13:00';r.pmOut=s.stdPmOut||'17:00';}
   else{r.amIn='';r.amOut='';r.pmIn='';r.pmOut='';}
   saveData();renderAttendance();
 }
@@ -513,15 +533,9 @@ function renderEmpManager(){
       +'<button class="btn-del" onclick="deleteEmployee('+i+')">刪除</button></div>';
   }).join('');
 }
-function addEmployee(){
-  var inp=document.getElementById('newEmpName');var name=inp.value.trim();
-  if(!name)return;employees.push(name);inp.value='';saveData();renderEmpManager();
-}
+function addEmployee(){var inp=document.getElementById('newEmpName');var name=inp.value.trim();if(!name)return;employees.push(name);inp.value='';saveData();renderEmpManager();}
 function renameEmployee(i,name){if(name.trim()){employees[i]=name.trim();saveData();}}
-function deleteEmployee(i){
-  if(!confirm('確定刪除「'+employees[i]+'」？'))return;
-  employees.splice(i,1);saveData();renderEmpManager();
-}
+function deleteEmployee(i){if(!confirm('確定刪除「'+employees[i]+'」？'))return;employees.splice(i,1);saveData();renderEmpManager();}
 
 function renderSalaryList(){
   var w=document.getElementById('salaryList');
@@ -532,11 +546,9 @@ function renderSalaryList(){
       return'<div class="change-item">'
         +'<input class="inp" style="flex:1" value="'+f.name+'" placeholder="項目名稱" onchange="updateFixedItem('+i+','+j+',\'name\',this.value)">'
         +'<input class="inp inp-sm" type="number" value="'+f.amount+'" onchange="updateFixedItem('+i+','+j+',\'amount\',this.value)">'
-        +'<button class="btn-sm btn-red" onclick="removeFixedItem('+i+','+j+')">✕</button>'
-        +'</div>';
+        +'<button class="btn-sm btn-red" onclick="removeFixedItem('+i+','+j+')">✕</button></div>';
     }).join('');
-    return'<div class="card">'
-      +'<div class="row-between"><div class="emp-salary-name">'+name+'</div>'
+    return'<div class="card"><div class="row-between"><div class="emp-salary-name">'+name+'</div>'
       +'<span class="tag '+(s.type==='monthly'?'tag-monthly':'tag-daily')+'">'+(s.type==='monthly'?'月薪':'日薪')+'</span></div>'
       +'<div class="card-row"><label>薪資制</label>'
       +'<select class="inp" onchange="updateSalaryField('+i+',\'type\',this.value)">'
@@ -551,12 +563,10 @@ function renderSalaryList(){
       +'<div class="divider"></div>'
       +'<div style="font-size:12px;color:var(--ink-faint);margin-bottom:6px;">標準上班時間</div>'
       +'<div class="card-row"><label>上午</label>'
-      +'<input type="time" class="inp inp-time" value="'+s.stdAmIn+'" onchange="updateSalaryField('+i+',\'stdAmIn\',this.value)">'
-      +'<span style="font-size:12px;">～</span>'
+      +'<input type="time" class="inp inp-time" value="'+s.stdAmIn+'" onchange="updateSalaryField('+i+',\'stdAmIn\',this.value)"> ～ '
       +'<input type="time" class="inp inp-time" value="'+s.stdAmOut+'" onchange="updateSalaryField('+i+',\'stdAmOut\',this.value)"></div>'
       +'<div class="card-row"><label>下午</label>'
-      +'<input type="time" class="inp inp-time" value="'+s.stdPmIn+'" onchange="updateSalaryField('+i+',\'stdPmIn\',this.value)">'
-      +'<span style="font-size:12px;">～</span>'
+      +'<input type="time" class="inp inp-time" value="'+s.stdPmIn+'" onchange="updateSalaryField('+i+',\'stdPmIn\',this.value)"> ～ '
       +'<input type="time" class="inp inp-time" value="'+s.stdPmOut+'" onchange="updateSalaryField('+i+',\'stdPmOut\',this.value)"></div>'
       +'<div class="divider"></div>'
       +'<div style="font-size:12px;color:var(--ink-faint);margin-bottom:6px;">固定項目（每次發薪自動帶入）</div>'
@@ -565,12 +575,7 @@ function renderSalaryList(){
       +'</div>';
   }).join('');
 }
-function updateSalaryField(i,key,val){
-  var s=getSalary(i);
-  s[key]=(key==='base'||key==='otRate')?parseInt(val)||0:val;
-  saveData();
-  if(key==='type')renderSalaryList();
-}
+function updateSalaryField(i,key,val){var s=getSalary(i);s[key]=(key==='base'||key==='otRate')?(parseInt(val)||0):val;saveData();if(key==='type')renderSalaryList();}
 function addFixedItem(i){getSalary(i).fixedItems.push({name:'',amount:0});saveData();renderSalaryList();}
 function updateFixedItem(i,j,key,val){getSalary(i).fixedItems[j][key]=key==='amount'?(parseInt(val)||0):val;saveData();}
 function removeFixedItem(i,j){getSalary(i).fixedItems.splice(j,1);saveData();renderSalaryList();}
@@ -584,24 +589,43 @@ function renderInsuranceList(){
     var hg=getHealthGrade(ins.healthSalary);
     var lc=calcLabor(lg);
     var hc=calcHealth(hg,ins.dependents);
-    return'<div class="card"><div class="emp-salary-name">'+name+'</div>'
-      +'<div class="ins-row"><label>勞保投保薪資</label>'
+    var pension=calcPension(ins.laborSalary,ins.pensionRate);
+    var laborHtml=ins.laborEnabled?
+      '<div class="ins-row"><label>投保薪資</label>'
       +'<input class="inp inp-md" type="number" value="'+ins.laborSalary+'" onchange="updateIns('+i+',\'laborSalary\',this.value)">'
       +'<span class="ins-grade">級距：'+lg.toLocaleString()+'</span></div>'
       +'<div class="ins-row"><label>　員工自付</label><span style="color:var(--absent);">'+lc.emp.toLocaleString()+'元</span>'
-      +'<label style="margin-left:12px;">雇主</label><span style="color:var(--accent);">'+lc.employer.toLocaleString()+'元</span></div>'
-      +'<div class="divider"></div>'
-      +'<div class="ins-row"><label>健保投保薪資</label>'
+      +'<label style="margin-left:12px;">雇主</label><span style="color:var(--accent);">'+lc.employer.toLocaleString()+'元</span></div>':'';
+    var healthHtml=ins.healthEnabled?
+      '<div class="ins-row"><label>投保薪資</label>'
       +'<input class="inp inp-md" type="number" value="'+ins.healthSalary+'" onchange="updateIns('+i+',\'healthSalary\',this.value)">'
       +'<span class="ins-grade">級距：'+hg.toLocaleString()+'</span></div>'
       +'<div class="ins-row"><label>眷屬人數</label>'
       +'<input class="inp inp-sm" type="number" value="'+ins.dependents+'" min="0" onchange="updateIns('+i+',\'dependents\',this.value)"></div>'
       +'<div class="ins-row"><label>　員工自付</label><span style="color:var(--absent);">'+hc.emp.toLocaleString()+'元</span>'
-      +'<label style="margin-left:12px;">雇主</label><span style="color:var(--accent);">'+hc.employer.toLocaleString()+'元</span></div>'
+      +'<label style="margin-left:12px;">雇主</label><span style="color:var(--accent);">'+hc.employer.toLocaleString()+'元</span></div>':'';
+    var pensionHtml=ins.pensionEnabled?
+      '<div class="ins-row"><label>自提撥比率</label>'
+      +'<input class="inp inp-sm" type="number" value="'+ins.pensionRate+'" min="0" max="6" onchange="updateIns('+i+',\'pensionRate\',this.value)">'
+      +'<span style="font-size:12px;color:var(--ink-faint);">%（0-6%）</span></div>'
+      +'<div class="ins-row"><label>　自提撥金額</label><span style="color:var(--absent);">'+pension.toLocaleString()+'元／月</span></div>':'';
+    return'<div class="card"><div class="emp-salary-name">'+name+'</div>'
+      +'<div class="toggle-row"><label>勞保</label>'
+      +'<button class="toggle-btn '+(ins.laborEnabled?'on':'off')+'" onclick="toggleIns('+i+',\'laborEnabled\')"></button></div>'
+      +laborHtml
+      +'<div class="divider"></div>'
+      +'<div class="toggle-row"><label>健保</label>'
+      +'<button class="toggle-btn '+(ins.healthEnabled?'on':'off')+'" onclick="toggleIns('+i+',\'healthEnabled\')"></button></div>'
+      +healthHtml
+      +'<div class="divider"></div>'
+      +'<div class="toggle-row"><label>勞退自提撥</label>'
+      +'<button class="toggle-btn '+(ins.pensionEnabled?'on':'off')+'" onclick="toggleIns('+i+',\'pensionEnabled\')"></button></div>'
+      +pensionHtml
       +'</div>';
   }).join('');
 }
 function updateIns(i,key,val){getInsurance(i)[key]=parseInt(val)||0;saveData();renderInsuranceList();}
+function toggleIns(i,key){var ins=getInsurance(i);ins[key]=!ins[key];saveData();renderInsuranceList();}
 
 function renderChangeItemList(){
   var w=document.getElementById('changeItemList');
@@ -630,38 +654,28 @@ function addChangeItem(){
   document.getElementById('newChangeName').value='';
   saveData();renderChangeItemList();
 }
-function removeChangeItem(idx){
-  if(!confirm('確定刪除？'))return;
-  changeItems.items.splice(idx,1);saveData();renderChangeItemList();
-}
-function updateChangeAmount(idx,empIdx,val){
-  if(!changeItems.items[idx].amounts)changeItems.items[idx].amounts={};
-  changeItems.items[idx].amounts[empIdx]=parseInt(val)||0;saveData();
-}
-</script>
-<script>
-function calcEmpPay(i,days,start,end){
+function removeChangeItem(idx){if(!confirm('確定刪除？'))return;changeItems.items.splice(idx,1);saveData();renderChangeItemList();}
+function updateChangeAmount(idx,empIdx,val){if(!changeItems.items[idx].amounts)changeItems.items[idx].amounts={};changeItems.items[idx].amounts[empIdx]=parseInt(val)||0;saveData();}
+  </script>
+  <script>
+function calcEmpPay(i,days){
   var s=getSalary(i);
   var ins=getInsurance(i);
   var lg=getLaborGrade(ins.laborSalary);
   var hg=getHealthGrade(ins.healthSalary);
-  var lc=calcLabor(lg);
-  var hc=calcHealth(hg,ins.dependents);
+  var lc=ins.laborEnabled?calcLabor(lg):{emp:0,employer:0};
+  var hc=ins.healthEnabled?calcHealth(hg,ins.dependents):{emp:0,employer:0};
+  var pension=ins.pensionEnabled?calcPension(ins.laborSalary,ins.pensionRate):0;
   var attendDays=0,totalOTHours=0,totalOTPay=0;
   days.forEach(function(d){
     var r=getRecord(d,i);
-    if(r.present){
-      attendDays++;
-      var ot=calcOT(r,s);
-      totalOTHours+=ot.totalOT;
-      totalOTPay+=ot.totalPay;
-    }
+    if(r.present){attendDays++;var ot=calcOT(r,s);totalOTHours+=ot.totalOT;totalOTPay+=ot.totalPay;}
   });
   var basePay=s.type==='monthly'?s.base:s.base*attendDays;
   var baseLabel=s.type==='monthly'?'月薪':'日薪×'+attendDays+'天';
   var addItems=[],deductItems=[],totalAdd=basePay,totalDeduct=0;
   s.fixedItems.forEach(function(f){if(f.name&&f.amount){addItems.push({name:f.name,amount:f.amount});totalAdd+=f.amount;}});
-  if(totalOTPay>0){addItems.push({name:'加班費（'+totalOTHours+'小時）',amount:totalOTPay});totalAdd+=totalOTPay;}
+  if(totalOTPay>0){addItems.push({name:'加班費（'+totalOTHours+'hr）',amount:totalOTPay});totalAdd+=totalOTPay;}
   var citems=changeItems.items||[];
   citems.forEach(function(item){
     var amt=item.amounts&&item.amounts[i]?item.amounts[i]:0;
@@ -669,15 +683,17 @@ function calcEmpPay(i,days,start,end){
     if(item.type==='add'){addItems.push({name:item.name,amount:amt});totalAdd+=amt;}
     else{deductItems.push({name:item.name,amount:amt});totalDeduct+=amt;}
   });
-  deductItems.push({name:'勞保（自付）',amount:lc.emp});totalDeduct+=lc.emp;
-  deductItems.push({name:'健保（自付）',amount:hc.emp});totalDeduct+=hc.emp;
+  if(ins.laborEnabled){deductItems.push({name:'勞保（自付）',amount:lc.emp});totalDeduct+=lc.emp;}
+  if(ins.healthEnabled){deductItems.push({name:'健保（自付）',amount:hc.emp});totalDeduct+=hc.emp;}
+  if(ins.pensionEnabled&&pension>0){deductItems.push({name:'勞退自提撥（'+ins.pensionRate+'%）',amount:pension});totalDeduct+=pension;}
   return{
     name:employees[i],baseLabel:baseLabel,basePay:basePay,
     addItems:addItems,deductItems:deductItems,
     totalAdd:totalAdd,totalDeduct:totalDeduct,
     netPay:totalAdd-totalDeduct,
     laborEmployer:lc.employer,healthEmployer:hc.employer,
-    attendDays:attendDays,totalOTHours:totalOTHours,totalOTPay:totalOTPay
+    laborEnabled:ins.laborEnabled,healthEnabled:ins.healthEnabled,
+    attendDays:attendDays,totalOTHours:totalOTHours
   };
 }
 
@@ -688,12 +704,13 @@ function generatePayslip(){
   var days=getDays(start,end);
   var company=companyName||'公司名稱';
   var totalCost=0;
-  var grid=document.getElementById('payslipGrid');
-  grid.innerHTML=employees.map(function(name,i){
-    var p=calcEmpPay(i,days,start,end);
+  document.getElementById('payslipGrid').innerHTML=employees.map(function(name,i){
+    var p=calcEmpPay(i,days);
     totalCost+=p.netPay;
     var addHtml=p.addItems.map(function(r){return'<div class="ps-row"><span>'+r.name+'</span><span>'+r.amount.toLocaleString()+'</span></div>';}).join('');
     var deductHtml=p.deductItems.map(function(r){return'<div class="ps-row"><span>'+r.name+'</span><span>-'+r.amount.toLocaleString()+'</span></div>';}).join('');
+    var employerHtml=(p.laborEnabled?'<div class="ps-row employer"><span>雇主負擔勞保</span><span>'+p.laborEmployer.toLocaleString()+'</span></div>':'')
+      +(p.healthEnabled?'<div class="ps-row employer"><span>雇主負擔健保</span><span>'+p.healthEmployer.toLocaleString()+'</span></div>':'');
     return'<div class="payslip-cell">'
       +'<div class="ps-header"><div class="ps-company">'+company+'</div>'
       +'<div class="ps-name">'+name+'</div>'
@@ -704,23 +721,18 @@ function generatePayslip(){
       +'<div class="ps-section-label">▌應扣項目</div>'
       +deductHtml
       +'<div class="ps-row total"><span>實領金額</span><span>'+p.netPay.toLocaleString()+' 元</span></div>'
-      +'<div class="ps-row employer"><span>雇主負擔勞保</span><span>'+p.laborEmployer.toLocaleString()+'</span></div>'
-      +'<div class="ps-row employer"><span>雇主負擔健保</span><span>'+p.healthEmployer.toLocaleString()+'</span></div>'
-      +'</div>';
+      +employerHtml+'</div>';
   }).join('');
   document.getElementById('payslip-area').style.display='block';
-  // 記錄薪資歷史
   var existing=payrollHistory.findIndex(function(h){return h.start===start&&h.end===end;});
-  var record={start:start,end:end,total:totalCost,date:today()};
-  if(existing>=0)payrollHistory[existing]=record;
-  else payrollHistory.push(record);
+  var rec={start:start,end:end,total:totalCost,date:today()};
+  if(existing>=0)payrollHistory[existing]=rec;else payrollHistory.push(rec);
   payrollHistory.sort(function(a,b){return a.start>b.start?-1:1;});
   saveData();
 }
 
 function renderReportEmpSelect(){
-  var sel=document.getElementById('reportEmp');
-  sel.innerHTML=employees.map(function(name,i){return'<option value="'+i+'">'+name+'</option>';}).join('');
+  document.getElementById('reportEmp').innerHTML=employees.map(function(name,i){return'<option value="'+i+'">'+name+'</option>';}).join('');
 }
 
 function generatePersonalReport(){
@@ -737,25 +749,23 @@ function generatePersonalReport(){
     var r=getRecord(d,empIdx);
     var ot=r.present?calcOT(r,s):{totalOT:0};
     if(r.present){attendDays++;totalOTHours+=ot.totalOT;}
-    return'<tr>'
-      +'<td>'+d.slice(5)+'</td>'
+    return'<tr><td>'+d.slice(5)+'</td>'
       +'<td>'+(r.present?'<span style="color:var(--present)">出勤</span>':'<span style="color:var(--ink-faint)">缺勤</span>')+'</td>'
       +'<td>'+(r.present?r.amIn+'-'+r.amOut:'—')+'</td>'
       +'<td>'+(r.present?r.pmIn+'-'+r.pmOut:'—')+'</td>'
       +'<td>'+(ot.totalOT>0?ot.totalOT+'hr':'—')+'</td>'
-      +'<td>'+(r.note||'—')+'</td>'
-      +'</tr>';
+      +'<td>'+(r.note||'—')+'</td></tr>';
   }).join('');
   var salaryHtml='';
   if(inclSalary){
     var relevant=payrollHistory.filter(function(h){return h.end>=start&&h.start<=end;});
     if(relevant.length>0){
-      var phRows=relevant.map(function(h){
-        var p=calcEmpPay(empIdx,getDays(h.start,h.end),h.start,h.end);
-        return'<tr><td>'+h.start+'～'+h.end+'</td><td style="text-align:right;">'+p.netPay.toLocaleString()+' 元</td></tr>';
-      }).join('');
       salaryHtml='<div style="margin-top:16px;"><div class="section-title">薪資紀錄</div>'
-        +'<div class="report-table-wrap"><table><thead><tr><th>發薪區間</th><th>實領金額</th></tr></thead><tbody>'+phRows+'</tbody></table></div></div>';
+        +'<div class="report-table-wrap"><table><thead><tr><th>發薪區間</th><th>實領金額</th></tr></thead><tbody>'
+        +relevant.map(function(h){
+          var p=calcEmpPay(empIdx,getDays(h.start,h.end));
+          return'<tr><td>'+h.start+'～'+h.end+'</td><td style="text-align:right;">'+p.netPay.toLocaleString()+' 元</td></tr>';
+        }).join('')+'</tbody></table></div></div>';
     }
   }
   document.getElementById('reportWrap').innerHTML=
@@ -763,8 +773,7 @@ function generatePersonalReport(){
     +'<div style="font-size:16px;font-weight:700;margin-bottom:4px;">'+name+'　出勤報表</div>'
     +'<div style="font-size:12px;color:var(--ink-faint);margin-bottom:12px;">'+start+' ～ '+end+'　出勤 '+attendDays+' 天　加班 '+totalOTHours+' 小時</div>'
     +'<div class="report-table-wrap"><table><thead><tr><th>日期</th><th>狀態</th><th>上午</th><th>下午</th><th>加班</th><th>備註</th></tr></thead>'
-    +'<tbody>'+rows+'</tbody></table></div>'
-    +salaryHtml+'</div>';
+    +'<tbody>'+rows+'</tbody></table></div>'+salaryHtml+'</div>';
 }
 
 function exportImage(mode){
@@ -781,16 +790,14 @@ function exportImage(mode){
     ctx.fillStyle='#fffef9';ctx.fillRect(0,0,pw,ph);
     ctx.fillStyle='#1a1710';ctx.font='bold 17px serif';ctx.textAlign='center';
     ctx.fillText(name+'　出勤統計',pw/2,36);
-    ctx.font='13px serif';ctx.fillStyle='#666';
-    ctx.fillText(start+' ～ '+end,pw/2,58);
+    ctx.font='13px serif';ctx.fillStyle='#666';ctx.fillText(start+' ～ '+end,pw/2,58);
     var count=0,otH=0;
     days.forEach(function(d){var r=getRecord(d,empIdx);if(r.present){count++;otH+=calcOT(r,getSalary(empIdx)).totalOT;}});
     ctx.fillStyle='#1a1710';ctx.font='bold 28px serif';ctx.textAlign='center';
     ctx.fillText(count+' 天',pw/2,100);
-    ctx.font='14px serif';ctx.fillStyle='var(--warn)';
-    ctx.fillText('加班 '+otH+' 小時',pw/2,128);
+    ctx.font='14px serif';ctx.fillStyle='#e67e22';ctx.fillText('加班 '+otH+' 小時',pw/2,128);
     var a=document.createElement('a');a.download=name+'-簡表-'+start+'.png';a.href=c.toDataURL('image/png');document.body.appendChild(a);a.click();document.body.removeChild(a);
-  } else {
+  }else{
     var pw2=460,rowH=26,ph2=100+days.length*rowH;
     var c2=document.createElement('canvas');c2.width=pw2;c2.height=ph2;
     var ctx2=c2.getContext('2d');
@@ -806,12 +813,9 @@ function exportImage(mode){
       ctx2.fillStyle=r.present?'#2c7a4b':'#aaa';ctx2.font='12px serif';ctx2.textAlign='left';
       ctx2.fillText(d.slice(5),16,y+17);
       if(r.present){
-        ctx2.fillStyle='#1a1710';
-        ctx2.fillText(r.amIn+'-'+r.amOut+'　'+r.pmIn+'-'+r.pmOut,70,y+17);
-        if(ot.totalOT>0){ctx2.fillStyle='#e67e22';ctx2.fillText('+'+ot.totalOT+'hr',340,y+17);}
-      } else {
-        ctx2.fillText('缺勤',70,y+17);
-      }
+        ctx2.fillStyle='#1a1710';ctx2.fillText(r.amIn+'-'+r.amOut+'　'+r.pmIn+'-'+r.pmOut,70,y+17);
+        if(ot.totalOT>0){ctx2.fillStyle='#e67e22';ctx2.fillText('+'+ot.totalOT+'hr',360,y+17);}
+      }else{ctx2.fillText('缺勤',70,y+17);}
     });
     var a2=document.createElement('a');a2.download=name+'-明細-'+start+'.png';a2.href=c2.toDataURL('image/png');document.body.appendChild(a2);a2.click();document.body.removeChild(a2);
   }
@@ -819,31 +823,27 @@ function exportImage(mode){
 
 function renderCostYearSelect(){
   var sel=document.getElementById('costYear');
-  var thisYear=new Date().getFullYear();
-  var opts='';
-  for(var y=thisYear;y>=thisYear-3;y--){opts+='<option value="'+y+'">'+y+'年</option>';}
+  var y=new Date().getFullYear();
+  var opts='';for(var i=y;i>=y-3;i--){opts+='<option value="'+i+'">'+i+'年</option>';}
   sel.innerHTML=opts;
 }
 
 function renderCostReport(){
-  var year=parseInt(document.getElementById('costYear').value);
-  var filtered=payrollHistory.filter(function(h){return h.start.slice(0,4)==String(year)||h.end.slice(0,4)==String(year);});
+  var year=String(document.getElementById('costYear').value);
+  var filtered=payrollHistory.filter(function(h){return h.start.slice(0,4)===year||h.end.slice(0,4)===year;});
   var wrap=document.getElementById('costReport');
   if(filtered.length===0){wrap.innerHTML='<div class="empty-hint">'+year+'年尚無薪資紀錄</div>';return;}
   var grandTotal=0;
   var rows=filtered.map(function(h){
     var total=0;
-    employees.forEach(function(_,i){total+=calcEmpPay(i,getDays(h.start,h.end),h.start,h.end).netPay;});
+    employees.forEach(function(_,i){total+=calcEmpPay(i,getDays(h.start,h.end)).netPay;});
     grandTotal+=total;
     return'<tr><td>'+h.start+'</td><td>'+h.end+'</td><td style="text-align:right;font-weight:500;">'+total.toLocaleString()+' 元</td></tr>';
   }).join('');
   wrap.innerHTML='<div class="cost-card">'
     +'<div style="font-size:13px;color:var(--ink-faint);margin-bottom:6px;">'+year+'年　薪資總支出</div>'
-    +'<div class="cost-total">'+grandTotal.toLocaleString()+' 元</div>'
-    +'</div>'
-    +'<div class="report-table-wrap"><table>'
-    +'<thead><tr><th>發薪起</th><th>發薪迄</th><th>總金額</th></tr></thead>'
-    +'<tbody>'+rows+'</tbody></table></div>';
+    +'<div class="cost-total">'+grandTotal.toLocaleString()+' 元</div></div>'
+    +'<div class="report-table-wrap"><table><thead><tr><th>發薪起</th><th>發薪迄</th><th>總金額</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
 function exportBackup(){
@@ -861,13 +861,17 @@ function importBackup(input){
     try{
       var d=JSON.parse(e.target.result);
       if(!d.employees){alert('格式錯誤');return;}
-      employees=d.employees;records=d.records||{};
-      salarySettings=d.salarySettings||{};insuranceSettings=d.insuranceSettings||{};
-      changeItems=d.changeItems||{};companyName=d.companyName||'';
-      payrollHistory=d.payrollHistory||[];
+      employees=d.employees;
+      records={};
+      if(d.records){Object.keys(d.records).forEach(function(date){records[date]={};Object.keys(d.records[date]).forEach(function(idx){records[date][idx]=migrateRecord(d.records[date][idx]);});});}
+      salarySettings={};
+      if(d.salarySettings){Object.keys(d.salarySettings).forEach(function(i){salarySettings[i]=migrateSalary(d.salarySettings[i]);});}
+      insuranceSettings={};
+      if(d.insuranceSettings){Object.keys(d.insuranceSettings).forEach(function(i){insuranceSettings[i]=migrateInsurance(d.insuranceSettings[i]);});}
+      changeItems=d.changeItems||{};companyName=d.companyName||'';payrollHistory=d.payrollHistory||[];
       saveData();alert('匯入成功！共'+employees.length+'位員工');
       renderAttendance();renderEmpManager();renderSalaryList();renderInsuranceList();renderChangeItemList();renderReportEmpSelect();renderCostYearSelect();
-    }catch(err){alert('讀取失敗');}
+    }catch(err){alert('讀取失敗：'+err);}
   };
   reader.readAsText(file);input.value='';
 }
