@@ -133,6 +133,11 @@ tbody tr:last-child td{border-bottom:none;}
 .preview-simple-name{font-weight:500;}
 .preview-simple-days{color:var(--present);font-weight:700;font-size:18px;}
 .preview-simple-ot{font-size:12px;color:var(--warn);margin-top:2px;}
+.daily-list{background:var(--paper);border:1.5px solid var(--border);border-radius:4px;padding:14px;margin-top:12px;}
+.daily-list-title{font-size:16px;font-weight:700;letter-spacing:2px;text-align:center;margin-bottom:4px;}
+.daily-list-sub{font-size:12px;color:var(--ink-faint);text-align:center;margin-bottom:12px;}
+.daily-list-item{padding:10px 12px;border-bottom:1px solid var(--border);font-size:16px;letter-spacing:1px;}
+.daily-list-item:last-child{border-bottom:none;}
 @media print{
   body{margin:0;padding:0;background:#fff;}
   .no-print{display:none!important;}
@@ -173,6 +178,10 @@ tbody tr:last-child td{border-bottom:none;}
     <span class="s-absent">缺勤：<strong id="s-absent">0</strong></span>
   </div>
   <div class="attendance-list" id="attendanceList"></div>
+  <div style="margin-top:12px;" class="no-print">
+    <button class="btn-sm btn-primary" style="width:100%;padding:10px;font-size:13px;letter-spacing:2px;" onclick="showDailyList()">📋 產生當日出勤表</button>
+  </div>
+  <div id="dailyListWrap" style="display:none;margin-top:12px;"></div>
 </div>
 <div id="tab-emp" style="display:none">
   <div class="emp-manager">
@@ -461,6 +470,21 @@ function togglePresent(date,idx){var r=getRecord(date,idx);var s=getSalary(idx);
 function updateRecord(date,idx,key,val){getRecord(date,idx)[key]=val;saveData();renderAttendance();}
 function updateSummary(date){var t=employees.length,p=0;employees.forEach(function(_,i){if(getRecord(date,i).present)p++;});document.getElementById('s-total').textContent=t;document.getElementById('s-present').textContent=p;document.getElementById('s-absent').textContent=t-p;}
 
+function showDailyList(){
+  var date=document.getElementById('currentDate').value;
+  var presentList=[];
+  employees.forEach(function(name,i){if(getRecord(date,i).present)presentList.push(name);});
+  var wrap=document.getElementById('dailyListWrap');
+  if(presentList.length===0){wrap.innerHTML='<div class="daily-list"><div class="daily-list-title">'+date+'</div><div class="daily-list-sub">今日無人出勤</div></div>';wrap.style.display='block';return;}
+  wrap.innerHTML='<div class="daily-list">'
+    +'<div class="daily-list-title">'+date+'　出勤名單</div>'
+    +'<div class="daily-list-sub">共 '+presentList.length+' 人出勤</div>'
+    +presentList.map(function(name,j){return'<div class="daily-list-item">'+(j+1)+'．'+name+'</div>';}).join('')
+    +'<div style="margin-top:12px;" class="no-print"><button class="btn-sm btn-green" style="width:100%;padding:10px;" onclick="window.print()">列印</button></div>'
+    +'</div>';
+  wrap.style.display='block';
+}
+
 function renderEmpManager(){
   var w=document.getElementById('empListManage');
   if(employees.length===0){w.innerHTML='<div class="empty-hint">尚無員工</div>';return;}
@@ -569,8 +593,8 @@ function renderReportEmpChecks(){
 }
 function selectAllReportEmp(val){employees.forEach(function(_,i){var cb=document.getElementById('rep-emp-'+i);if(cb)cb.checked=val;});}
 function getSelectedReportEmps(){var sel=[];employees.forEach(function(_,i){var cb=document.getElementById('rep-emp-'+i);if(cb&&cb.checked)sel.push(i);});return sel;}
-                            </script>
-                            <script>
+  </script>
+  <script>
 function calcEmpPay(i,days,forceDeductIns){
   var useDeduct=forceDeductIns!==undefined?forceDeductIns:deductInsurance;
   var s=getSalary(i);var ins=getInsurance(i);
@@ -622,8 +646,7 @@ function generatePersonalReport(){
   var start=document.getElementById('reportStart').value;var end=document.getElementById('reportEnd').value;
   var inclSalary=document.getElementById('reportIncludeSalary').checked;
   if(selEmps.length===0||!start||!end||start>end){alert('請選擇員工與正確日期區間');return;}
-  var days=getDays(start,end);
-  var html='';
+  var days=getDays(start,end);var html='';
   selEmps.forEach(function(empIdx){
     var name=employees[empIdx];var s=getSalary(empIdx);
     var attendDays=0,totalOTHours=0;
@@ -665,9 +688,7 @@ function previewSimpleReport(){
     return'<div class="preview-simple-row">'
       +'<div><div class="preview-simple-name">'+employees[empIdx]+'</div>'
       +(otH>0?'<div class="preview-simple-ot">加班 '+otH+' 小時</div>':'')
-      +'</div>'
-      +'<div class="preview-simple-days">'+count+' 天</div>'
-      +'</div>';
+      +'</div><div class="preview-simple-days">'+count+' 天</div></div>';
   }).join('');
   document.getElementById('reportWrap').innerHTML=
     '<div class="preview-area">'
