@@ -7,15 +7,17 @@
 <style>
 :root{--bg:#f7f4ef;--paper:#fffef9;--ink:#1a1710;--ink-light:#4a4640;--ink-faint:#9a9590;--border:#d4cfc8;--present:#2c7a4b;--present-bg:#e8f5ee;--absent:#c0392b;--absent-bg:#fdf0ee;--accent:#1a6b8a;--accent-bg:#e8f4f8;--accent-light:#e8d5d3;--warn:#e67e22;--warn-bg:#fef5ec;}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'PMingLiU','新細明體','MingLiU',serif;background:var(--bg);color:var(--ink);min-height:100vh;padding:20px 16px 40px;}
-.header{text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--ink);}
+body{font-family:'PMingLiU','新細明體','MingLiU',serif;background:var(--bg);color:var(--ink);min-height:100vh;padding:0 0 40px;}
+.header{text-align:center;padding:20px 16px 16px;border-bottom:2px solid var(--ink);background:var(--bg);}
 .header h1{font-size:22px;letter-spacing:4px;font-weight:700;}
 .header .subtitle{font-size:12px;color:var(--ink-light);margin-top:4px;letter-spacing:2px;}
 .auto-save-badge{display:inline-block;margin-top:6px;background:var(--present);color:#fff;font-size:11px;letter-spacing:1px;padding:2px 10px;border-radius:10px;}
-.tabs{display:flex;margin-bottom:20px;border:1.5px solid var(--ink);border-radius:4px;overflow:hidden;flex-wrap:wrap;}
+.sticky-top{position:sticky;top:0;z-index:100;background:var(--bg);}
+.tabs{display:flex;border:1.5px solid var(--ink);border-radius:0;overflow:hidden;flex-wrap:wrap;margin:0;}
 .tab{flex:1;min-width:14%;padding:8px 2px;text-align:center;font-family:inherit;font-size:11px;letter-spacing:1px;cursor:pointer;background:var(--paper);border:none;border-right:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);}
 .tab:last-child{border-right:none;}
 .tab.active{background:var(--ink);color:#fff;}
+.tab-content{padding:16px 16px 0;}
 .date-bar{display:flex;align-items:center;gap:10px;background:var(--paper);border:1.5px solid var(--border);border-radius:4px;padding:10px 14px;margin-bottom:18px;}
 .date-bar label{font-size:13px;color:var(--ink-light);white-space:nowrap;}
 .date-bar input[type=date]{flex:1;border:none;background:transparent;font-family:inherit;font-size:15px;color:var(--ink);outline:none;}
@@ -141,6 +143,7 @@ tbody tr:last-child td{border-bottom:none;}
 @media print{
   body{margin:0;padding:0;background:#fff;}
   .no-print{display:none!important;}
+  .sticky-top{position:static;}
   .payslip-grid{border:1px solid #aaa;}
   .payslip-cell{border:1px solid #aaa;}
 }
@@ -152,17 +155,20 @@ tbody tr:last-child td{border-bottom:none;}
   <div class="subtitle">Attendance & Payroll System</div>
   <div class="auto-save-badge">✓ 自動儲存中</div>
 </div>
-<div class="tabs no-print">
-  <button class="tab active" onclick="showTab('attend')">出勤</button>
-  <button class="tab" onclick="showTab('emp')">員工</button>
-  <button class="tab" onclick="showTab('salary')">薪資設定</button>
-  <button class="tab" onclick="showTab('change')">異動</button>
-  <button class="tab" onclick="showTab('insurance')">勞健保</button>
-  <button class="tab" onclick="showTab('payslip')">薪資單</button>
-  <button class="tab" onclick="showTab('report')">報表</button>
-  <button class="tab" onclick="showTab('cost')">支出統計</button>
-  <button class="tab" onclick="showTab('backup')">備份</button>
+<div class="sticky-top no-print">
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('attend')">出勤</button>
+    <button class="tab" onclick="showTab('emp')">員工</button>
+    <button class="tab" onclick="showTab('salary')">薪資設定</button>
+    <button class="tab" onclick="showTab('change')">異動</button>
+    <button class="tab" onclick="showTab('insurance')">勞健保</button>
+    <button class="tab" onclick="showTab('payslip')">薪資單</button>
+    <button class="tab" onclick="showTab('report')">報表</button>
+    <button class="tab" onclick="showTab('cost')">支出統計</button>
+    <button class="tab" onclick="showTab('backup')">備份</button>
+  </div>
 </div>
+<div class="tab-content">
 <div id="tab-attend">
   <div class="date-bar no-print">
     <label>日期：</label>
@@ -234,8 +240,7 @@ tbody tr:last-child td{border-bottom:none;}
     </div>
     <div style="font-size:11px;color:var(--accent);margin-top:4px;line-height:1.6;">
       勞保個人自付：投保薪資×2.5%　雇主：投保薪資×8.8996%+職災<br>
-      健保個人自付：投保薪資×5.17%×30%×(1+眷屬)　雇主：×5.17%×60%<br>
-      勞退自提撥：使用獨立投保薪資，與勞保無關
+      健保個人自付：月投保金額×5.17%×30%×(1+眷屬)　雇主：×5.17%×60%
     </div>
   </div>
   <div class="section-title">員工勞健保設定</div>
@@ -335,6 +340,7 @@ tbody tr:last-child td{border-bottom:none;}
     </div>
   </div>
 </div>
+</div>
 <script>
 var STORAGE_KEY='atd_v5';
 var employees=[],records={},salarySettings={},insuranceSettings={},changeItems={},companyName='',payrollHistory=[],companyDisasterRate=0.1496;
@@ -390,12 +396,45 @@ function saveData(){
 loadData();
 
 var laborGrades=[45800,43900,42000,40100,38200,36300,34500,33300,32100,30900,29600,28800,27600,26400,25200,24000,22800,21900,21000,20100,19200,18300,17400,16500,15840,15030,14400,13500,12900,12540,11100,10200,0];
-var healthGrades=[182000,172600,162800,150000,140400,132300,124200,116500,107700,98500,92100,86200,80100,73800,69800,66000,62400,58900,55900,53000,50300,47700,45300,43900,42000,40100,38200,36300,34500,33300,32100,30900,29600,28800,27600,26400,25200,24000,22800,0];
+
+// 健保月投保金額對照表 [實際薪資上限, 月投保金額]
+var healthGradeTable=[
+  [29500,29500],[30300,30300],[31800,31800],[33300,33300],[34800,34800],[36300,36300],
+  [38200,38200],[40100,40100],[42000,42000],[43900,43900],[45800,45800],[48200,48200],
+  [50600,50600],[53000,53000],[55400,55400],[57800,57800],[60800,60800],[63800,63800],
+  [66800,66800],[69800,69800],[72800,72800],[76500,76500],[80200,80200],[83900,83900],
+  [87600,87600],[92100,92100],[96600,96600],[101100,101100],[105600,105600],[110100,110100],
+  [115500,115500],[120900,120900],[126300,126300],[131700,131700],[137100,137100],[142500,142500],
+  [147900,147900],[150000,150000],[156400,156400],[162800,162800],[169200,169200],[175600,175600],
+  [182000,182000],[189500,189500],[197000,197000],[204500,204500],[212000,212000],[219500,219500],
+  [228200,228200],[236900,236900],[245600,245600],[254300,254300],[263000,263000],[273000,273000],
+  [283000,283000],[293000,293000],[303000,303000],[999999999,313000]
+];
+
+function getHealthMonthlyAmount(salary){
+  for(var i=0;i<healthGradeTable.length;i++){
+    if(salary<=healthGradeTable[i][0])return healthGradeTable[i][1];
+  }
+  return healthGradeTable[healthGradeTable.length-1][1];
+}
 
 function getLaborGrade(s){for(var i=0;i<laborGrades.length;i++){if(s>=laborGrades[i])return laborGrades[i];}return laborGrades[laborGrades.length-2];}
-function getHealthGrade(s){for(var i=0;i<healthGrades.length;i++){if(s>=healthGrades[i])return healthGrades[i];}return healthGrades[healthGrades.length-2];}
-function calcLabor(grade){var emp=Math.round(grade*0.025);var disasterAmt=Math.round(grade*(companyDisasterRate/100));var employer=Math.round(grade*0.088996)+disasterAmt;return{emp:emp,employer:employer,disasterAmt:disasterAmt,accident:Math.round(grade*0.115*0.2),employment:Math.round(grade*0.01*0.2),accidentEmployer:Math.round(grade*0.115*0.7),employmentEmployer:Math.round(grade*0.01*0.7)};}
-function calcHealth(grade,dep){var d=dep||0;return{emp:Math.round(grade*0.0517*0.3*(1+d)),employer:Math.round(grade*0.0517*0.6)};}
+
+function calcLabor(grade){
+  var emp=Math.round(grade*0.025);
+  var disasterAmt=Math.round(grade*(companyDisasterRate/100));
+  var employer=Math.round(grade*0.088996)+disasterAmt;
+  return{emp:emp,employer:employer,disasterAmt:disasterAmt,accident:Math.round(grade*0.115*0.2),employment:Math.round(grade*0.01*0.2),accidentEmployer:Math.round(grade*0.115*0.7),employmentEmployer:Math.round(grade*0.01*0.7)};
+}
+
+function calcHealth(salary,dep){
+  var d=dep||0;
+  var monthlyAmt=getHealthMonthlyAmount(salary);
+  var emp=Math.round(monthlyAmt*0.0517*0.3*(1+d));
+  var employer=Math.round(monthlyAmt*0.0517*0.6);
+  return{emp:emp,employer:employer,monthlyAmt:monthlyAmt};
+}
+
 function calcPension(salary,rate){return Math.round(salary*(rate/100));}
 
 function today(){var n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
@@ -520,8 +559,9 @@ function renderInsuranceList(){
   if(employees.length===0){w.innerHTML='<div class="empty-hint">請先新增員工</div>';return;}
   w.innerHTML=employees.map(function(name,i){
     var ins=getInsurance(i);
-    var lg=getLaborGrade(ins.laborSalary);var hg=getHealthGrade(ins.healthSalary);
-    var lc=calcLabor(lg);var hc=calcHealth(hg,ins.dependents);
+    var lg=getLaborGrade(ins.laborSalary);
+    var lc=calcLabor(lg);
+    var hc=calcHealth(ins.healthSalary,ins.dependents);
     var pension=calcPension(ins.pensionSalary,ins.pensionRate);
     var laborHtml=ins.laborEnabled?
       '<div class="ins-row"><label>投保薪資</label><input class="inp inp-md" type="number" value="'+ins.laborSalary+'" onchange="updateIns('+i+',\'laborSalary\',this.value)"><span class="ins-grade">級距：'+lg.toLocaleString()+'</span></div>'
@@ -530,7 +570,7 @@ function renderInsuranceList(){
       +'<tr><td>雇主負擔</td><td>'+lc.accidentEmployer.toLocaleString()+'</td><td>'+lc.disasterAmt.toLocaleString()+'</td><td>'+lc.employmentEmployer.toLocaleString()+'</td><td><strong>'+lc.employer.toLocaleString()+'</strong></td></tr>'
       +'</table>':'';
     var healthHtml=ins.healthEnabled?
-      '<div class="ins-row"><label>投保薪資</label><input class="inp inp-md" type="number" value="'+ins.healthSalary+'" onchange="updateIns('+i+',\'healthSalary\',this.value)"><span class="ins-grade">級距：'+hg.toLocaleString()+'</span></div>'
+      '<div class="ins-row"><label>投保薪資</label><input class="inp inp-md" type="number" value="'+ins.healthSalary+'" onchange="updateIns('+i+',\'healthSalary\',this.value)"><span class="ins-grade">月投保：'+hc.monthlyAmt.toLocaleString()+'</span></div>'
       +'<div class="ins-row"><label>眷屬人數</label><input class="inp inp-sm" type="number" value="'+ins.dependents+'" min="0" onchange="updateIns('+i+',\'dependents\',this.value)"></div>'
       +'<div class="ins-row"><label>　員工自付</label><span style="color:var(--absent);">'+hc.emp.toLocaleString()+' 元</span><label style="margin-left:12px;">雇主</label><span style="color:var(--accent);">'+hc.employer.toLocaleString()+' 元</span></div>':'';
     var pensionHtml=ins.pensionEnabled?
@@ -593,14 +633,14 @@ function renderReportEmpChecks(){
 }
 function selectAllReportEmp(val){employees.forEach(function(_,i){var cb=document.getElementById('rep-emp-'+i);if(cb)cb.checked=val;});}
 function getSelectedReportEmps(){var sel=[];employees.forEach(function(_,i){var cb=document.getElementById('rep-emp-'+i);if(cb&&cb.checked)sel.push(i);});return sel;}
-  </script>
-  <script>
+    </script>
+    <script>
 function calcEmpPay(i,days,forceDeductIns){
   var useDeduct=forceDeductIns!==undefined?forceDeductIns:deductInsurance;
   var s=getSalary(i);var ins=getInsurance(i);
-  var lg=getLaborGrade(ins.laborSalary);var hg=getHealthGrade(ins.healthSalary);
+  var lg=getLaborGrade(ins.laborSalary);
   var lc=ins.laborEnabled?calcLabor(lg):{emp:0,employer:0,disasterAmt:0};
-  var hc=ins.healthEnabled?calcHealth(hg,ins.dependents):{emp:0,employer:0};
+  var hc=ins.healthEnabled?calcHealth(ins.healthSalary,ins.dependents):{emp:0,employer:0,monthlyAmt:0};
   var pension=ins.pensionEnabled?calcPension(ins.pensionSalary,ins.pensionRate):0;
   var attendDays=0,totalOTHours=0,totalOTPay=0;
   days.forEach(function(d){var r=getRecord(d,i);if(r.present){attendDays++;var ot=calcOT(r,s);totalOTHours+=ot.totalOT;totalOTPay+=ot.totalPay;}});
