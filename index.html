@@ -32,12 +32,17 @@ body{font-family:'PMingLiU','新細明體','MingLiU',serif;background:var(--bg);
 .attendance-list{display:flex;flex-direction:column;gap:8px;}
 .emp-card{background:var(--paper);border:1.5px solid var(--border);border-radius:4px;padding:12px 14px;}
 .emp-card.present{border-left:4px solid var(--present);}
+.emp-card.half{border-left:4px solid var(--warn);}
 .emp-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-.check-btn{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
-.check-btn.checked{background:var(--present);border-color:var(--present);color:#fff;}
+.check-btn{width:36px;height:28px;border-radius:14px;border:2px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;letter-spacing:0;}
+.check-btn.full{background:var(--present);border-color:var(--present);color:#fff;}
+.check-btn.am{background:var(--warn);border-color:var(--warn);color:#fff;}
+.check-btn.pm{background:var(--accent);border-color:var(--accent);color:#fff;}
 .emp-name{flex:1;font-size:16px;letter-spacing:1px;font-weight:500;}
 .emp-status{font-size:12px;padding:2px 8px;border-radius:10px;letter-spacing:1px;}
 .emp-status.present{background:var(--present-bg);color:var(--present);}
+.emp-status.half-am{background:var(--warn-bg);color:var(--warn);}
+.emp-status.half-pm{background:var(--accent-bg);color:var(--accent);}
 .emp-status.absent{background:var(--bg);color:var(--ink-faint);}
 .time-section{margin-bottom:6px;}
 .time-section-label{font-size:11px;color:var(--ink-faint);margin-bottom:4px;letter-spacing:1px;}
@@ -46,6 +51,7 @@ body{font-family:'PMingLiU','新細明體','MingLiU',serif;background:var(--bg);
 .time-field label{font-size:12px;color:var(--ink-faint);white-space:nowrap;}
 .time-field input[type=time]{flex:1;border:1px solid var(--border);border-radius:3px;padding:4px 6px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--ink);outline:none;}
 .ot-badge{font-size:11px;color:var(--warn);background:var(--warn-bg);padding:2px 8px;border-radius:8px;margin-top:4px;display:inline-block;}
+.late-badge{font-size:11px;color:var(--absent);background:var(--absent-bg);padding:2px 8px;border-radius:8px;margin-top:4px;display:inline-block;margin-left:4px;}
 .note-input{margin-top:6px;width:100%;border:1px solid var(--border);border-radius:3px;padding:4px 8px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--ink-light);outline:none;resize:none;}
 .emp-manager{display:flex;flex-direction:column;gap:12px;}
 .add-emp-row{display:flex;gap:8px;background:var(--paper);border:1.5px solid var(--border);border-radius:4px;padding:10px 12px;}
@@ -101,8 +107,6 @@ table{width:100%;border-collapse:collapse;font-size:13px;}
 thead th{background:var(--ink);color:#fff;padding:8px 10px;text-align:center;letter-spacing:1px;font-weight:500;white-space:nowrap;}
 tbody td{padding:7px 10px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;}
 tbody tr:last-child td{border-bottom:none;}
-.td-present{color:var(--present);font-weight:500;}
-.td-absent{color:var(--ink-faint);}
 .empty-hint{text-align:center;color:var(--ink-faint);font-size:13px;padding:30px 0;letter-spacing:1px;}
 .backup-panel{display:flex;flex-direction:column;gap:14px;}
 .backup-card{background:var(--paper);border:1.5px solid var(--border);border-radius:4px;padding:16px 14px;}
@@ -359,12 +363,13 @@ function toggleInsDeduct(){
 function defaultEmployees(){return['王小明','李小花','張大偉','陳美玲','林志豪'];}
 
 function migrateRecord(r){
-  if(!r)return{present:false,amIn:'',amOut:'',pmIn:'',pmOut:'',note:''};
-  return{present:r.present||false,amIn:r.amIn||r.in||'',amOut:r.amOut||r.out||'',pmIn:r.pmIn||'',pmOut:r.pmOut||'',note:r.note||''};
+  if(!r)return{status:'absent',amIn:'',amOut:'',pmIn:'',pmOut:'',note:''};
+  var status=r.status||( r.present?'full':'absent');
+  return{status:status,amIn:r.amIn||r.in||'',amOut:r.amOut||r.out||'',pmIn:r.pmIn||'',pmOut:r.pmOut||'',note:r.note||''};
 }
 function migrateSalary(s){
-  if(!s)return{type:'monthly',base:0,fixedItems:[],stdAmIn:'08:00',stdAmOut:'12:00',stdPmIn:'13:00',stdPmOut:'17:00',otRate:0};
-  return{type:s.type||'monthly',base:s.base||0,fixedItems:s.fixedItems||[],stdAmIn:s.stdAmIn||'08:00',stdAmOut:s.stdAmOut||'12:00',stdPmIn:s.stdPmIn||'13:00',stdPmOut:s.stdPmOut||'17:00',otRate:s.otRate||0};
+  if(!s)return{type:'monthly',base:0,dailyWage:0,fixedItems:[],stdAmIn:'08:00',stdAmOut:'12:00',stdPmIn:'13:00',stdPmOut:'17:00',otRate:0};
+  return{type:s.type||'monthly',base:s.base||0,dailyWage:s.dailyWage||0,fixedItems:s.fixedItems||[],stdAmIn:s.stdAmIn||'08:00',stdAmOut:s.stdAmOut||'12:00',stdPmIn:s.stdPmIn||'13:00',stdPmOut:s.stdPmOut||'17:00',otRate:s.otRate||0};
 }
 function migrateInsurance(ins){
   if(!ins)return{laborEnabled:true,healthEnabled:true,pensionEnabled:false,laborSalary:0,healthSalary:0,dependents:0,pensionRate:0,pensionSalary:0};
@@ -398,7 +403,6 @@ function saveData(){
 loadData();
 
 var laborGrades=[45800,43900,42000,40100,38200,36300,34500,33300,32100,30900,29600,28800,27600,26400,25200,24000,22800,21900,21000,20100,19200,18300,17400,16500,15840,15030,14400,13500,12900,12540,11100,10200,0];
-
 var healthGradeTable=[
   [29500,29500],[30300,30300],[31800,31800],[33300,33300],[34800,34800],[36300,36300],
   [38200,38200],[40100,40100],[42000,42000],[43900,43900],[45800,45800],[48200,48200],
@@ -412,10 +416,7 @@ var healthGradeTable=[
   [283000,283000],[293000,293000],[303000,303000],[999999999,313000]
 ];
 
-function getHealthMonthlyAmount(salary){
-  for(var i=0;i<healthGradeTable.length;i++){if(salary<=healthGradeTable[i][0])return healthGradeTable[i][1];}
-  return healthGradeTable[healthGradeTable.length-1][1];
-}
+function getHealthMonthlyAmount(salary){for(var i=0;i<healthGradeTable.length;i++){if(salary<=healthGradeTable[i][0])return healthGradeTable[i][1];}return healthGradeTable[healthGradeTable.length-1][1];}
 function getLaborGrade(s){for(var i=0;i<laborGrades.length;i++){if(s>=laborGrades[i])return laborGrades[i];}return laborGrades[laborGrades.length-2];}
 function calcLabor(grade){var emp=Math.round(grade*0.025);var disasterAmt=Math.round(grade*(companyDisasterRate/100));var employer=Math.round(grade*0.088996)+disasterAmt;return{emp:emp,employer:employer,disasterAmt:disasterAmt,accident:Math.round(grade*0.115*0.2),employment:Math.round(grade*0.01*0.2),accidentEmployer:Math.round(grade*0.115*0.7),employmentEmployer:Math.round(grade*0.01*0.7)};}
 function calcHealth(salary,dep){var d=dep||0;var m=getHealthMonthlyAmount(salary);return{emp:Math.round(m*0.0517*0.3*(1+d)),employer:Math.round(m*0.0517*0.6),monthlyAmt:m};}
@@ -427,12 +428,42 @@ function getRecord(date,id){if(!records[date])records[date]={};if(!records[date]
 function getSalary(i){if(!salarySettings[i])salarySettings[i]=migrateSalary(null);return salarySettings[i];}
 function getInsurance(i){if(!insuranceSettings[i])insuranceSettings[i]=migrateInsurance(null);return insuranceSettings[i];}
 
+function isPresent(status){return status==='full'||status==='am'||status==='pm';}
+function attendDayCount(status){if(status==='full')return 1;if(status==='am'||status==='pm')return 0.5;return 0;}
+
+function toMin(t){if(!t)return null;var p=t.split(':');return parseInt(p[0])*60+parseInt(p[1]);}
+
+function calcLateDeduct(record,salary){
+  if(!isPresent(record.status))return{totalMins:0,amount:0,detail:[]};
+  var dailyWage=salary.dailyWage||0;
+  if(!dailyWage)return{totalMins:0,amount:0,detail:[]};
+  var perMin=dailyWage/8/60;
+  var detail=[];var totalMins=0;
+  function check(actual,std,label,isBefore){
+    var a=toMin(actual),s=toMin(std);
+    if(a===null||s===null)return;
+    var diff=isBefore?(a-s):(s-a);
+    if(diff>0){totalMins+=diff;detail.push(label+' '+diff+'分');}
+  }
+  var st=record.status;
+  if(st==='full'||st==='am'){
+    check(record.amIn,salary.stdAmIn,'上午遲到',true);
+    check(record.amOut,salary.stdAmOut,'上午早退',false);
+  }
+  if(st==='full'||st==='pm'){
+    check(record.pmIn,salary.stdPmIn,'下午遲到',true);
+    check(record.pmOut,salary.stdPmOut,'下午早退',false);
+  }
+  var amount=Math.round(totalMins*perMin);
+  return{totalMins:totalMins,amount:amount,detail:detail};
+}
+
 function calcOT(record,salary){
-  if(!record.present)return{totalOT:0,totalPay:0};
-  function toMin(t){if(!t)return null;var p=t.split(':');return parseInt(p[0])*60+parseInt(p[1]);}
+  if(!isPresent(record.status))return{totalOT:0,totalPay:0};
   function otUnits(actual,std,isBefore){var a=toMin(actual),s=toMin(std);if(a===null||s===null)return 0;var diff=isBefore?(s-a):(a-s);if(diff<=0)return 0;return Math.ceil(diff/30)*0.5;}
-  var amOT=otUnits(record.amIn,salary.stdAmIn,true)+otUnits(record.amOut,salary.stdAmOut,false);
-  var pmOT=otUnits(record.pmIn,salary.stdPmIn,true)+otUnits(record.pmOut,salary.stdPmOut,false);
+  var st=record.status;var amOT=0,pmOT=0;
+  if(st==='full'||st==='am'){amOT=otUnits(record.amIn,salary.stdAmIn,true)+otUnits(record.amOut,salary.stdAmOut,false);}
+  if(st==='full'||st==='pm'){pmOT=otUnits(record.pmIn,salary.stdPmIn,true)+otUnits(record.pmOut,salary.stdPmOut,false);}
   return{totalOT:amOT+pmOT,totalPay:Math.round((amOT+pmOT)*(salary.otRate||0))};
 }
 
@@ -470,35 +501,65 @@ function showTab(name){
 
 function changeDate(delta){var inp=document.getElementById('currentDate');var d=new Date(inp.value+'T00:00:00');d.setDate(d.getDate()+delta);inp.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');renderAttendance();}
 
+function cycleStatus(date,idx){
+  var r=getRecord(date,idx);var s=getSalary(idx);
+  var next={absent:'full',full:'am',am:'pm',pm:'absent'};
+  r.status=next[r.status]||'full';
+  if(r.status==='full'){r.amIn=s.stdAmIn;r.amOut=s.stdAmOut;r.pmIn=s.stdPmIn;r.pmOut=s.stdPmOut;}
+  else if(r.status==='am'){r.amIn=s.stdAmIn;r.amOut=s.stdAmOut;r.pmIn='';r.pmOut='';}
+  else if(r.status==='pm'){r.amIn='';r.amOut='';r.pmIn=s.stdPmIn;r.pmOut=s.stdPmOut;}
+  else{r.amIn='';r.amOut='';r.pmIn='';r.pmOut='';}
+  saveData();renderAttendance();
+}
+
 function renderAttendance(){
   var date=document.getElementById('currentDate').value;
   var list=document.getElementById('attendanceList');
   if(employees.length===0){list.innerHTML='<div class="empty-hint">請先至員工分頁新增員工</div>';return;}
   list.innerHTML=employees.map(function(name,i){
-    var r=getRecord(date,i);var s=getSalary(i);var ot=calcOT(r,s);
-    var otHtml=ot.totalOT>0?'<div class="ot-badge">加班 '+ot.totalOT+' 小時　加班費 '+ot.totalPay.toLocaleString()+' 元</div>':'';
-    return'<div class="emp-card '+(r.present?'present':'')+'">'
-      +'<div class="emp-top"><button class="check-btn '+(r.present?'checked':'')+'" onclick="togglePresent(\''+date+'\','+i+')">'+(r.present?'✓':'')+'</button>'
-      +'<div class="emp-name">'+name+'</div><span class="emp-status '+(r.present?'present':'absent')+'">'+(r.present?'出勤':'缺勤')+'</span></div>'
-      +(r.present?'<div class="time-section"><div class="time-section-label">上午</div><div class="time-row">'
+    var r=getRecord(date,i);var s=getSalary(i);
+    var ot=calcOT(r,s);var ld=calcLateDeduct(r,s);
+    var st=r.status;
+    var btnClass=st==='full'?'full':st==='am'?'am':st==='pm'?'pm':'';
+    var btnText=st==='full'?'全天':st==='am'?'上午':st==='pm'?'下午':'　';
+    var cardClass=st==='full'?'present':st==='am'||st==='pm'?'half':'';
+    var statusClass=st==='full'?'present':st==='am'?'half-am':st==='pm'?'half-pm':'absent';
+    var statusText=st==='full'?'出勤':st==='am'?'上午':st==='pm'?'下午':'缺勤';
+    var badges='';
+    if(ot.totalOT>0)badges+='<div class="ot-badge">加班 '+ot.totalOT+'hr　+'+ot.totalPay.toLocaleString()+'元</div>';
+    if(ld.amount>0)badges+='<div class="late-badge">遲到早退 -'+ld.amount.toLocaleString()+'元（'+ld.detail.join('、')+'）</div>';
+    var showAm=st==='full'||st==='am';var showPm=st==='full'||st==='pm';
+    return'<div class="emp-card '+cardClass+'">'
+      +'<div class="emp-top"><button class="check-btn '+btnClass+'" onclick="cycleStatus(\''+date+'\','+i+')">'+btnText+'</button>'
+      +'<div class="emp-name">'+name+'</div><span class="emp-status '+statusClass+'">'+statusText+'</span></div>'
+      +(isPresent(st)?
+        (showAm?'<div class="time-section"><div class="time-section-label">上午</div><div class="time-row">'
         +'<div class="time-field"><label>上班</label><input type="time" class="inp-time" value="'+r.amIn+'" onchange="updateRecord(\''+date+'\','+i+',\'amIn\',this.value)"></div>'
         +'<div class="time-field"><label>下班</label><input type="time" class="inp-time" value="'+r.amOut+'" onchange="updateRecord(\''+date+'\','+i+',\'amOut\',this.value)"></div>'
-        +'</div></div><div class="time-section"><div class="time-section-label">下午</div><div class="time-row">'
+        +'</div></div>':'')
+        +(showPm?'<div class="time-section"><div class="time-section-label">下午</div><div class="time-row">'
         +'<div class="time-field"><label>上班</label><input type="time" class="inp-time" value="'+r.pmIn+'" onchange="updateRecord(\''+date+'\','+i+',\'pmIn\',this.value)"></div>'
         +'<div class="time-field"><label>下班</label><input type="time" class="inp-time" value="'+r.pmOut+'" onchange="updateRecord(\''+date+'\','+i+',\'pmOut\',this.value)"></div>'
-        +'</div></div>'+otHtml:'')
+        +'</div></div>':'')
+        +badges:'')
       +'<textarea class="note-input" rows="1" placeholder="備註" onchange="updateRecord(\''+date+'\','+i+',\'note\',this.value)">'+r.note+'</textarea></div>';
   }).join('');
   updateSummary(date);
 }
-function togglePresent(date,idx){var r=getRecord(date,idx);var s=getSalary(idx);r.present=!r.present;if(r.present){r.amIn=s.stdAmIn||'08:00';r.amOut=s.stdAmOut||'12:00';r.pmIn=s.stdPmIn||'13:00';r.pmOut=s.stdPmOut||'17:00';}else{r.amIn='';r.amOut='';r.pmIn='';r.pmOut='';}saveData();renderAttendance();}
+
 function updateRecord(date,idx,key,val){getRecord(date,idx)[key]=val;saveData();renderAttendance();}
-function updateSummary(date){var t=employees.length,p=0;employees.forEach(function(_,i){if(getRecord(date,i).present)p++;});document.getElementById('s-total').textContent=t;document.getElementById('s-present').textContent=p;document.getElementById('s-absent').textContent=t-p;}
+function updateSummary(date){
+  var t=employees.length,p=0,half=0;
+  employees.forEach(function(_,i){var st=getRecord(date,i).status;if(st==='full')p++;else if(st==='am'||st==='pm')half++;});
+  document.getElementById('s-total').textContent=t;
+  document.getElementById('s-present').textContent=p+(half>0?'（+'+half+'半天）':'');
+  document.getElementById('s-absent').textContent=t-p-half;
+}
 
 function showDailyList(){
   var date=document.getElementById('currentDate').value;
   var presentList=[];
-  employees.forEach(function(name,i){if(getRecord(date,i).present)presentList.push(name);});
+  employees.forEach(function(name,i){var st=getRecord(date,i).status;if(isPresent(st))presentList.push(name+(st==='am'?'（上午）':st==='pm'?'（下午）':''));});
   var wrap=document.getElementById('dailyListWrap');
   if(presentList.length===0){wrap.innerHTML='<div class="daily-list"><div class="daily-list-title">'+date+'</div><div class="daily-list-sub">今日無人出勤</div></div>';wrap.style.display='block';return;}
   wrap.innerHTML='<div class="daily-list">'
@@ -527,6 +588,7 @@ function renderSalaryList(){
     var fixedHtml=s.fixedItems.map(function(f,j){return'<div class="change-item"><input class="inp" style="flex:1" value="'+f.name+'" placeholder="項目名稱" onchange="updateFixedItem('+i+','+j+',\'name\',this.value)"><input class="inp inp-sm" type="number" value="'+f.amount+'" onchange="updateFixedItem('+i+','+j+',\'amount\',this.value)"><button class="btn-sm btn-red" onclick="removeFixedItem('+i+','+j+')">✕</button></div>';}).join('');
     return'<div class="card"><div class="row-between"><div class="emp-salary-name">'+name+'</div><span class="tag '+(s.type==='monthly'?'tag-monthly':'tag-daily')+'">'+(s.type==='monthly'?'月薪':'日薪')+'</span></div>'
       +'<div class="card-row"><label>薪資制</label><select class="inp" onchange="updateSalaryField('+i+',\'type\',this.value)"><option value="monthly"'+(s.type==='monthly'?' selected':'')+'>月薪</option><option value="daily"'+(s.type==='daily'?' selected':'')+'>日薪</option></select><label>'+(s.type==='monthly'?'月薪':'日薪')+'金額</label><input class="inp inp-md" type="number" value="'+s.base+'" onchange="updateSalaryField('+i+',\'base\',this.value)"></div>'
+      +'<div class="card-row"><label>平均日薪</label><input class="inp inp-md" type="number" value="'+s.dailyWage+'" placeholder="遲到早退用" onchange="updateSalaryField('+i+',\'dailyWage\',this.value)"><span style="font-size:11px;color:var(--ink-faint);">遲到早退計算用</span></div>'
       +'<div class="card-row"><label>加班單價</label><input class="inp inp-sm" type="number" value="'+s.otRate+'" onchange="updateSalaryField('+i+',\'otRate\',this.value)"><span style="font-size:12px;color:var(--ink-faint);">元／每半小時</span></div>'
       +'<div class="divider"></div><div style="font-size:12px;color:var(--ink-faint);margin-bottom:6px;">標準上班時間</div>'
       +'<div class="card-row"><label>上午</label><input type="time" class="inp inp-time" value="'+s.stdAmIn+'" onchange="updateSalaryField('+i+',\'stdAmIn\',this.value)"> ～ <input type="time" class="inp inp-time" value="'+s.stdAmOut+'" onchange="updateSalaryField('+i+',\'stdAmOut\',this.value)"></div>'
@@ -535,7 +597,7 @@ function renderSalaryList(){
       +fixedHtml+'<button class="btn-sm btn-accent" style="margin-top:6px;" onclick="addFixedItem('+i+')">＋ 新增固定項目</button></div>';
   }).join('');
 }
-function updateSalaryField(i,key,val){var s=getSalary(i);s[key]=(key==='base'||key==='otRate')?(parseInt(val)||0):val;saveData();if(key==='type')renderSalaryList();}
+function updateSalaryField(i,key,val){var s=getSalary(i);s[key]=(key==='base'||key==='otRate'||key==='dailyWage')?(parseInt(val)||0):val;saveData();if(key==='type')renderSalaryList();}
 function addFixedItem(i){getSalary(i).fixedItems.push({name:'',amount:0});saveData();renderSalaryList();}
 function updateFixedItem(i,j,key,val){getSalary(i).fixedItems[j][key]=key==='amount'?(parseInt(val)||0):val;saveData();}
 function removeFixedItem(i,j){getSalary(i).fixedItems.splice(j,1);saveData();renderSalaryList();}
@@ -544,10 +606,8 @@ function renderInsuranceList(){
   var w=document.getElementById('insuranceList');
   if(employees.length===0){w.innerHTML='<div class="empty-hint">請先新增員工</div>';return;}
   w.innerHTML=employees.map(function(name,i){
-    var ins=getInsurance(i);
-    var lg=getLaborGrade(ins.laborSalary);
-    var lc=calcLabor(lg);
-    var hc=calcHealth(ins.healthSalary,ins.dependents);
+    var ins=getInsurance(i);var lg=getLaborGrade(ins.laborSalary);
+    var lc=calcLabor(lg);var hc=calcHealth(ins.healthSalary,ins.dependents);
     var pension=calcPension(ins.pensionSalary,ins.pensionRate);
     var laborHtml=ins.laborEnabled?
       '<div class="ins-row"><label>投保薪資</label><input class="inp inp-md" type="number" value="'+ins.laborSalary+'" onchange="updateIns('+i+',\'laborSalary\',this.value)"><span class="ins-grade">級距：'+lg.toLocaleString()+'</span></div>'
@@ -577,8 +637,7 @@ function toggleIns(i,key){var ins=getInsurance(i);ins[key]=!ins[key];saveData();
 
 var batchTarget=-1;
 function showBatchPanel(idx){
-  var item=changeItems.items[idx];
-  var w=document.getElementById('batchPanel-'+idx);
+  var item=changeItems.items[idx];var w=document.getElementById('batchPanel-'+idx);
   if(w.style.display==='none'||!w.style.display){
     w.innerHTML='<div style="font-size:13px;color:var(--accent);font-weight:500;margin-bottom:8px;">選擇要加入此異動的員工：</div>'
       +employees.map(function(name,i){return'<div class="emp-check-row"><input type="checkbox" id="bc-'+idx+'-'+i+'" '+(item.amounts&&item.amounts[i]!==undefined?'checked':'')+'><label for="bc-'+idx+'-'+i+'">'+name+'</label></div>';}).join('')
@@ -628,13 +687,21 @@ function calcEmpPay(i,days,forceDeductIns){
   var lc=ins.laborEnabled?calcLabor(lg):{emp:0,employer:0,disasterAmt:0};
   var hc=ins.healthEnabled?calcHealth(ins.healthSalary,ins.dependents):{emp:0,employer:0,monthlyAmt:0};
   var pension=ins.pensionEnabled?calcPension(ins.pensionSalary,ins.pensionRate):0;
-  var attendDays=0,totalOTHours=0,totalOTPay=0;
-  days.forEach(function(d){var r=getRecord(d,i);if(r.present){attendDays++;var ot=calcOT(r,s);totalOTHours+=ot.totalOT;totalOTPay+=ot.totalPay;}});
-  var basePay=s.type==='monthly'?s.base:s.base*attendDays;
+  var attendDays=0,totalOTHours=0,totalOTPay=0,totalLateDeduct=0;
+  days.forEach(function(d){
+    var r=getRecord(d,i);
+    if(isPresent(r.status)){
+      attendDays+=attendDayCount(r.status);
+      var ot=calcOT(r,s);totalOTHours+=ot.totalOT;totalOTPay+=ot.totalPay;
+      var ld=calcLateDeduct(r,s);totalLateDeduct+=ld.amount;
+    }
+  });
+  var basePay=s.type==='monthly'?s.base:Math.round(s.base*attendDays);
   var baseLabel=s.type==='monthly'?'月薪':'日薪×'+attendDays+'天';
   var addItems=[],deductItems=[],totalAdd=basePay,totalDeduct=0;
   s.fixedItems.forEach(function(f){if(f.name&&f.amount){addItems.push({name:f.name,amount:f.amount});totalAdd+=f.amount;}});
   if(totalOTPay>0){addItems.push({name:'加班費（'+totalOTHours+'hr）',amount:totalOTPay});totalAdd+=totalOTPay;}
+  if(totalLateDeduct>0){deductItems.push({name:'遲到早退扣薪',amount:totalLateDeduct});totalDeduct+=totalLateDeduct;}
   var citems=changeItems.items||[];
   citems.forEach(function(item){var amt=item.amounts&&item.amounts[i]?item.amounts[i]:0;if(!amt)return;if(item.type==='add'){addItems.push({name:item.name,amount:amt});totalAdd+=amt;}else{deductItems.push({name:item.name,amount:amt});totalDeduct+=amt;}});
   if(useDeduct){
@@ -642,7 +709,7 @@ function calcEmpPay(i,days,forceDeductIns){
     if(ins.healthEnabled){deductItems.push({name:'健保（自付）',amount:hc.emp});totalDeduct+=hc.emp;}
     if(ins.pensionEnabled&&pension>0){deductItems.push({name:'勞退自提撥（'+ins.pensionRate+'%）',amount:pension});totalDeduct+=pension;}
   }
-  return{name:employees[i],baseLabel:baseLabel,basePay:basePay,addItems:addItems,deductItems:deductItems,totalAdd:totalAdd,totalDeduct:totalDeduct,netPay:totalAdd-totalDeduct,laborEmployer:lc.employer,healthEmployer:hc.employer,laborEnabled:ins.laborEnabled,healthEnabled:ins.healthEnabled,attendDays:attendDays,totalOTHours:totalOTHours};
+  return{name:employees[i],baseLabel:baseLabel,basePay:basePay,addItems:addItems,deductItems:deductItems,totalAdd:totalAdd,totalDeduct:totalDeduct,netPay:totalAdd-totalDeduct,laborEmployer:lc.employer,healthEmployer:hc.employer,laborEnabled:ins.laborEnabled,healthEnabled:ins.healthEnabled,attendDays:attendDays,totalOTHours:totalOTHours,totalLateDeduct:totalLateDeduct};
 }
 
 function generatePayslip(){
@@ -675,13 +742,19 @@ function generatePersonalReport(){
   var days=getDays(start,end);var html='';
   selEmps.forEach(function(empIdx){
     var name=employees[empIdx];var s=getSalary(empIdx);
-    var attendDays=0,totalOTHours=0;
+    var attendDays=0,totalOTHours=0,totalLate=0;
     var rows=days.map(function(d){
-      var r=getRecord(d,empIdx);var ot=r.present?calcOT(r,s):{totalOT:0};
-      if(r.present){attendDays++;totalOTHours+=ot.totalOT;}
-      return'<tr><td>'+d.slice(5)+'</td><td>'+(r.present?'<span style="color:var(--present)">出勤</span>':'<span style="color:var(--ink-faint)">缺勤</span>')+'</td>'
-        +'<td>'+(r.present?r.amIn+'-'+r.amOut:'—')+'</td><td>'+(r.present?r.pmIn+'-'+r.pmOut:'—')+'</td>'
-        +'<td>'+(ot.totalOT>0?ot.totalOT+'hr':'—')+'</td><td>'+(r.note||'—')+'</td></tr>';
+      var r=getRecord(d,empIdx);
+      var ot=isPresent(r.status)?calcOT(r,s):{totalOT:0};
+      var ld=isPresent(r.status)?calcLateDeduct(r,s):{amount:0};
+      if(isPresent(r.status)){attendDays+=attendDayCount(r.status);totalOTHours+=ot.totalOT;totalLate+=ld.amount;}
+      var stText=r.status==='full'?'<span style="color:var(--present)">出勤</span>':r.status==='am'?'<span style="color:var(--warn)">上午</span>':r.status==='pm'?'<span style="color:var(--accent)">下午</span>':'<span style="color:var(--ink-faint)">缺勤</span>';
+      return'<tr><td>'+d.slice(5)+'</td><td>'+stText+'</td>'
+        +'<td>'+(isPresent(r.status)&&(r.status==='full'||r.status==='am')?r.amIn+'-'+r.amOut:'—')+'</td>'
+        +'<td>'+(isPresent(r.status)&&(r.status==='full'||r.status==='pm')?r.pmIn+'-'+r.pmOut:'—')+'</td>'
+        +'<td>'+(ot.totalOT>0?ot.totalOT+'hr':'—')+'</td>'
+        +'<td>'+(ld.amount>0?'-'+ld.amount:'—')+'</td>'
+        +'<td>'+(r.note||'—')+'</td></tr>';
     }).join('');
     var salaryHtml='';
     if(inclSalary){
@@ -695,8 +768,8 @@ function generatePersonalReport(){
     }
     html+='<div style="background:var(--paper);padding:14px;border:1.5px solid var(--border);border-radius:4px;margin-bottom:12px;">'
       +'<div style="font-size:16px;font-weight:700;margin-bottom:4px;">'+name+'　出勤報表</div>'
-      +'<div style="font-size:12px;color:var(--ink-faint);margin-bottom:12px;">'+start+' ～ '+end+'　出勤 '+attendDays+' 天　加班 '+totalOTHours+' 小時</div>'
-      +'<div class="report-table-wrap"><table><thead><tr><th>日期</th><th>狀態</th><th>上午</th><th>下午</th><th>加班</th><th>備註</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'<div style="font-size:12px;color:var(--ink-faint);margin-bottom:12px;">'+start+' ～ '+end+'　出勤 '+attendDays+' 天　加班 '+totalOTHours+' 小時'+(totalLate>0?'　遲到早退扣 '+totalLate+' 元':'')+'</div>'
+      +'<div class="report-table-wrap"><table><thead><tr><th>日期</th><th>狀態</th><th>上午</th><th>下午</th><th>加班</th><th>遲扣</th><th>備註</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
       +salaryHtml+'</div>';
   });
   document.getElementById('reportWrap').innerHTML=html;
@@ -709,11 +782,15 @@ function previewSimpleReport(){
   if(selEmps.length===0||!start||!end||start>end){alert('請選擇員工與正確日期區間');return;}
   var days=getDays(start,end);
   var rows=selEmps.map(function(empIdx){
-    var count=0,otH=0;
-    days.forEach(function(d){var r=getRecord(d,empIdx);if(r.present){count++;otH+=calcOT(r,getSalary(empIdx)).totalOT;}});
+    var count=0,otH=0,lateAmt=0;
+    days.forEach(function(d){
+      var r=getRecord(d,empIdx);var s=getSalary(empIdx);
+      if(isPresent(r.status)){count+=attendDayCount(r.status);otH+=calcOT(r,s).totalOT;lateAmt+=calcLateDeduct(r,s).amount;}
+    });
     return'<div class="preview-simple-row">'
       +'<div><div class="preview-simple-name">'+employees[empIdx]+'</div>'
       +(otH>0?'<div class="preview-simple-ot">加班 '+otH+' 小時</div>':'')
+      +(lateAmt>0?'<div style="font-size:12px;color:var(--absent);margin-top:2px;">遲到早退扣 '+lateAmt+' 元</div>':'')
       +'</div><div class="preview-simple-days">'+count+' 天</div></div>';
   }).join('');
   document.getElementById('reportWrap').innerHTML=
@@ -736,24 +813,18 @@ function renderCostReport(){
   if(filtered.length===0){wrap.innerHTML='<div class="empty-hint">'+year+'年尚無薪資紀錄</div>';return;}
   var grandTotal=0;
   var rows=filtered.map(function(h){
-    var total=0;
-    employees.forEach(function(_,i){total+=calcEmpPay(i,getDays(h.start,h.end),false).netPay;});
-    grandTotal+=total;
-    var realIdx=payrollHistory.indexOf(h);
-    return'<tr><td>'+h.start+'</td><td>'+h.end+'</td>'
-      +'<td style="text-align:right;font-weight:500;">'+total.toLocaleString()+' 元</td>'
+    var total=0;employees.forEach(function(_,i){total+=calcEmpPay(i,getDays(h.start,h.end),false).netPay;});
+    grandTotal+=total;var realIdx=payrollHistory.indexOf(h);
+    return'<tr><td>'+h.start+'</td><td>'+h.end+'</td><td style="text-align:right;font-weight:500;">'+total.toLocaleString()+' 元</td>'
       +'<td><button class="btn-sm btn-red" style="padding:3px 8px;" onclick="deletePayroll('+realIdx+')">刪除</button></td></tr>';
   }).join('');
-  wrap.innerHTML='<div class="cost-card"><div style="font-size:13px;color:var(--ink-faint);margin-bottom:6px;">'+year+'年　薪資總支出</div>'
-    +'<div class="cost-total">'+grandTotal.toLocaleString()+' 元</div></div>'
+  wrap.innerHTML='<div class="cost-card"><div style="font-size:13px;color:var(--ink-faint);margin-bottom:6px;">'+year+'年　薪資總支出</div><div class="cost-total">'+grandTotal.toLocaleString()+' 元</div></div>'
     +'<div class="report-table-wrap"><table><thead><tr><th>發薪起</th><th>發薪迄</th><th>總金額</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
 function deletePayroll(idx){
   if(!confirm('確定刪除這筆發薪紀錄（'+payrollHistory[idx].start+'～'+payrollHistory[idx].end+'）？'))return;
-  payrollHistory.splice(idx,1);
-  saveData();
-  renderCostReport();
+  payrollHistory.splice(idx,1);saveData();renderCostReport();
 }
 
 function exportBackup(){
