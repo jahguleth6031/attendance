@@ -423,6 +423,17 @@ function calcHealth(salary,dep){var d=dep||0;var m=getHealthMonthlyAmount(salary
 function calcPension(salary,rate){return Math.round(salary*(rate/100));}
 
 function today(){var n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
+
+function getPayPeriod(){
+  var n=new Date();
+  var y=n.getFullYear();var m=n.getMonth()+1;var d=n.getDate();
+  var mm=String(m).padStart(2,'0');
+  var lastDay=new Date(y,m,0).getDate();
+  if(d<=10)return{s:y+'-'+mm+'-01',e:y+'-'+mm+'-10'};
+  if(d<=20)return{s:y+'-'+mm+'-11',e:y+'-'+mm+'-20'};
+  return{s:y+'-'+mm+'-21',e:y+'-'+mm+'-'+String(lastDay).padStart(2,'0')};
+}
+
 function getDays(start,end){var days=[],cur=new Date(start+'T00:00:00'),last=new Date(end+'T00:00:00');while(cur<=last){days.push(cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0'));cur.setDate(cur.getDate()+1);}return days;}
 function getRecord(date,id){if(!records[date])records[date]={};if(!records[date][id])records[date][id]=migrateRecord(null);return records[date][id];}
 function getSalary(i){if(!salarySettings[i])salarySettings[i]=migrateSalary(null);return salarySettings[i];}
@@ -490,26 +501,16 @@ function calcLeaveAdj(empIdx,payStart,payEnd){
   var overTotal=Math.max(0,totalAbsent-s.monthlyLeaveDays);
   var overThisPeriod=Math.max(0,overTotal-prevDeducted);
   var underDays=0;
-  if(isLast){
-    var underTotal=Math.max(0,s.monthlyLeaveDays-totalAbsent);
-    underDays=underTotal>0?underTotal:0;
-  }
-  return{
-    overDays:overThisPeriod,
-    underDays:underDays,
-    overAmt:Math.round(overThisPeriod*s.dailyWage),
-    underAmt:Math.round(underDays*s.dailyWage),
-    isLast:isLast
-  };
+  if(isLast){var underTotal=Math.max(0,s.monthlyLeaveDays-totalAbsent);underDays=underTotal>0?underTotal:0;}
+  return{overDays:overThisPeriod,underDays:underDays,overAmt:Math.round(overThisPeriod*s.dailyWage),underAmt:Math.round(underDays*s.dailyWage),isLast:isLast};
 }
 
 document.getElementById('currentDate').value=today();
-var r1=new Date();r1.setMonth(r1.getMonth()-1);r1.setDate(1);
-var defStart=r1.getFullYear()+'-'+String(r1.getMonth()+1).padStart(2,'0')+'-01';
-document.getElementById('ps-start').value=defStart;
-document.getElementById('ps-end').value=today();
-document.getElementById('payStart').value=defStart;
-document.getElementById('payEnd').value=today();
+var pp=getPayPeriod();
+document.getElementById('ps-start').value=pp.s;
+document.getElementById('ps-end').value=pp.e;
+document.getElementById('payStart').value=pp.s;
+document.getElementById('payEnd').value=pp.e;
 var r6=new Date();r6.setMonth(r6.getMonth()-6);
 document.getElementById('reportStart').value=r6.getFullYear()+'-'+String(r6.getMonth()+1).padStart(2,'0')+'-'+String(r6.getDate()).padStart(2,'0');
 document.getElementById('reportEnd').value=today();
@@ -548,6 +549,10 @@ function cycleStatus(date,idx){
   saveData();renderAttendance();
 }
 
+function timeInput(val,onchange){
+  return'<input type="time" step="1800" class="inp-time" value="'+val+'" onchange="'+onchange+'">';
+}
+
 function renderAttendance(){
   var date=document.getElementById('currentDate').value;
   var list=document.getElementById('attendanceList');
@@ -570,12 +575,12 @@ function renderAttendance(){
       +'<div class="emp-name">'+name+'</div><span class="emp-status '+statusClass+'">'+statusText+'</span></div>'
       +(isPresent(st)?
         (showAm?'<div class="time-section"><div class="time-section-label">上午</div><div class="time-row">'
-        +'<div class="time-field"><label>上班</label><input type="time" class="inp-time" value="'+r.amIn+'" onchange="updateRecord(\''+date+'\','+i+',\'amIn\',this.value)"></div>'
-        +'<div class="time-field"><label>下班</label><input type="time" class="inp-time" value="'+r.amOut+'" onchange="updateRecord(\''+date+'\','+i+',\'amOut\',this.value)"></div>'
+        +'<div class="time-field"><label>上班</label>'+timeInput(r.amIn,'updateRecord(\''+date+'\','+i+',\'amIn\',this.value)')+'</div>'
+        +'<div class="time-field"><label>下班</label>'+timeInput(r.amOut,'updateRecord(\''+date+'\','+i+',\'amOut\',this.value)')+'</div>'
         +'</div></div>':'')
         +(showPm?'<div class="time-section"><div class="time-section-label">下午</div><div class="time-row">'
-        +'<div class="time-field"><label>上班</label><input type="time" class="inp-time" value="'+r.pmIn+'" onchange="updateRecord(\''+date+'\','+i+',\'pmIn\',this.value)"></div>'
-        +'<div class="time-field"><label>下班</label><input type="time" class="inp-time" value="'+r.pmOut+'" onchange="updateRecord(\''+date+'\','+i+',\'pmOut\',this.value)"></div>'
+        +'<div class="time-field"><label>上班</label>'+timeInput(r.pmIn,'updateRecord(\''+date+'\','+i+',\'pmIn\',this.value)')+'</div>'
+        +'<div class="time-field"><label>下班</label>'+timeInput(r.pmOut,'updateRecord(\''+date+'\','+i+',\'pmOut\',this.value)')+'</div>'
         +'</div></div>':'')
         +badges:'')
       +'<textarea class="note-input" rows="1" placeholder="備註" onchange="updateRecord(\''+date+'\','+i+',\'note\',this.value)">'+r.note+'</textarea></div>';
@@ -622,15 +627,15 @@ function renderSalaryList(){
   w.innerHTML=employees.map(function(name,i){
     var s=getSalary(i);
     var fixedHtml=s.fixedItems.map(function(f,j){return'<div class="change-item"><input class="inp" style="flex:1" value="'+f.name+'" placeholder="項目名稱" onchange="updateFixedItem('+i+','+j+',\'name\',this.value)"><input class="inp inp-sm" type="number" value="'+f.amount+'" onchange="updateFixedItem('+i+','+j+',\'amount\',this.value)"><button class="btn-sm btn-red" onclick="removeFixedItem('+i+','+j+')">✕</button></div>';}).join('');
-    var leaveRow=s.type==='monthly'?'<div class="card-row"><label>每月可休</label><input class="inp inp-sm" type="number" value="'+s.monthlyLeaveDays+'" placeholder="0" onchange="updateSalaryField('+i+',\'monthlyLeaveDays\',this.value)"><span style="font-size:12px;color:var(--ink-faint);">天（月薪制超休扣薪用）</span></div>':'';
+    var leaveRow=s.type==='monthly'?'<div class="card-row"><label>每月可休</label><input class="inp inp-sm" type="number" value="'+s.monthlyLeaveDays+'" placeholder="0" onchange="updateSalaryField('+i+',\'monthlyLeaveDays\',this.value)"><span style="font-size:12px;color:var(--ink-faint);">天（超休扣薪用）</span></div>':'';
     return'<div class="card"><div class="row-between"><div class="emp-salary-name">'+name+'</div><span class="tag '+(s.type==='monthly'?'tag-monthly':'tag-daily')+'">'+(s.type==='monthly'?'月薪':'日薪')+'</span></div>'
       +'<div class="card-row"><label>薪資制</label><select class="inp" onchange="updateSalaryField('+i+',\'type\',this.value)"><option value="monthly"'+(s.type==='monthly'?' selected':'')+'>月薪</option><option value="daily"'+(s.type==='daily'?' selected':'')+'>日薪</option></select><label>'+(s.type==='monthly'?'月薪':'日薪')+'金額</label><input class="inp inp-md" type="number" value="'+s.base+'" onchange="updateSalaryField('+i+',\'base\',this.value)"></div>'
       +'<div class="card-row"><label>平均日薪</label><input class="inp inp-md" type="number" value="'+s.dailyWage+'" placeholder="遲到早退用" onchange="updateSalaryField('+i+',\'dailyWage\',this.value)"><span style="font-size:11px;color:var(--ink-faint);">遲到早退／超休計算用</span></div>'
       +leaveRow
       +'<div class="card-row"><label>加班單價</label><input class="inp inp-sm" type="number" value="'+s.otRate+'" onchange="updateSalaryField('+i+',\'otRate\',this.value)"><span style="font-size:12px;color:var(--ink-faint);">元／每半小時</span></div>'
       +'<div class="divider"></div><div style="font-size:12px;color:var(--ink-faint);margin-bottom:6px;">標準上班時間</div>'
-      +'<div class="card-row"><label>上午</label><input type="time" class="inp inp-time" value="'+s.stdAmIn+'" onchange="updateSalaryField('+i+',\'stdAmIn\',this.value)"> ～ <input type="time" class="inp inp-time" value="'+s.stdAmOut+'" onchange="updateSalaryField('+i+',\'stdAmOut\',this.value)"></div>'
-      +'<div class="card-row"><label>下午</label><input type="time" class="inp inp-time" value="'+s.stdPmIn+'" onchange="updateSalaryField('+i+',\'stdPmIn\',this.value)"> ～ <input type="time" class="inp inp-time" value="'+s.stdPmOut+'" onchange="updateSalaryField('+i+',\'stdPmOut\',this.value)"></div>'
+      +'<div class="card-row"><label>上午</label><input type="time" step="1800" class="inp inp-time" value="'+s.stdAmIn+'" onchange="updateSalaryField('+i+',\'stdAmIn\',this.value)"> ～ <input type="time" step="1800" class="inp inp-time" value="'+s.stdAmOut+'" onchange="updateSalaryField('+i+',\'stdAmOut\',this.value)"></div>'
+      +'<div class="card-row"><label>下午</label><input type="time" step="1800" class="inp inp-time" value="'+s.stdPmIn+'" onchange="updateSalaryField('+i+',\'stdPmIn\',this.value)"> ～ <input type="time" step="1800" class="inp inp-time" value="'+s.stdPmOut+'" onchange="updateSalaryField('+i+',\'stdPmOut\',this.value)"></div>'
       +'<div class="divider"></div><div style="font-size:12px;color:var(--ink-faint);margin-bottom:6px;">固定項目（每次發薪自動帶入）</div>'
       +fixedHtml+'<button class="btn-sm btn-accent" style="margin-top:6px;" onclick="addFixedItem('+i+')">＋ 新增固定項目</button></div>';
   }).join('');
