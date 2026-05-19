@@ -49,7 +49,7 @@ body{font-family:'PMingLiU','新細明體','MingLiU',serif;background:var(--bg);
 .time-row{display:flex;gap:8px;align-items:center;}
 .time-field{display:flex;align-items:center;gap:4px;flex:1;}
 .time-field label{font-size:12px;color:var(--ink-faint);white-space:nowrap;}
-.time-field input[type=time]{flex:1;border:1px solid var(--border);border-radius:3px;padding:4px 6px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--ink);outline:none;}
+.time-sel{flex:1;border:1px solid var(--border);border-radius:3px;padding:4px 4px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--ink);outline:none;-webkit-appearance:none;appearance:none;text-align:center;}
 .ot-badge{font-size:11px;color:var(--warn);background:var(--warn-bg);padding:2px 8px;border-radius:8px;margin-top:4px;display:inline-block;}
 .late-badge{font-size:11px;color:var(--absent);background:var(--absent-bg);padding:2px 8px;border-radius:8px;margin-top:4px;display:inline-block;margin-left:4px;}
 .note-input{margin-top:6px;width:100%;border:1px solid var(--border);border-radius:3px;padding:4px 8px;font-family:inherit;font-size:12px;background:var(--bg);color:var(--ink-light);outline:none;resize:none;}
@@ -71,7 +71,7 @@ body{font-family:'PMingLiU','新細明體','MingLiU',serif;background:var(--bg);
 .inp-sm{width:90px;}
 .inp-md{width:130px;}
 .inp-lg{flex:1;}
-.inp-time{width:80px;}
+.inp-time{width:90px;}
 select.inp{padding:5px 6px;}
 .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;letter-spacing:1px;}
 .tag-monthly{background:#e8f4f8;color:var(--accent);}
@@ -441,7 +441,6 @@ function getInsurance(i){if(!insuranceSettings[i])insuranceSettings[i]=migrateIn
 
 function isPresent(status){return status==='full'||status==='am'||status==='pm';}
 function attendDayCount(status){if(status==='full')return 1;if(status==='am'||status==='pm')return 0.5;return 0;}
-function isAbsent(status){return status==='absent';}
 function absentDayCount(status){if(status==='absent')return 1;if(status==='am'||status==='pm')return 0.5;return 0;}
 
 function toMin(t){if(!t)return null;var p=t.split(':');return parseInt(p[0])*60+parseInt(p[1]);}
@@ -454,6 +453,23 @@ function isLastDayOfMonth(dateStr){
 }
 
 function getMonthStr(dateStr){return dateStr.slice(0,7);}
+
+// 產生時間下拉選單選項 (只有 XX:00 和 XX:30)
+function makeTimeOptions(selected){
+  var opts='';
+  for(var h=0;h<24;h++){
+    var hh=String(h).padStart(2,'0');
+    ['00','30'].forEach(function(mm){
+      var val=hh+':'+mm;
+      opts+='<option value="'+val+'"'+(val===selected?' selected':'')+'>'+val+'</option>';
+    });
+  }
+  return opts;
+}
+
+function timeSelect(val,onchangeStr){
+  return'<select class="time-sel inp-time" onchange="'+onchangeStr+'">'+makeTimeOptions(val)+'</select>';
+}
 
 function calcLateDeduct(record,salary){
   if(!isPresent(record.status))return{totalMins:0,amount:0,detail:[]};
@@ -511,9 +527,8 @@ document.getElementById('ps-start').value=pp.s;
 document.getElementById('ps-end').value=pp.e;
 document.getElementById('payStart').value=pp.s;
 document.getElementById('payEnd').value=pp.e;
-var r6=new Date();r6.setMonth(r6.getMonth()-6);
-document.getElementById('reportStart').value=r6.getFullYear()+'-'+String(r6.getMonth()+1).padStart(2,'0')+'-'+String(r6.getDate()).padStart(2,'0');
-document.getElementById('reportEnd').value=today();
+document.getElementById('reportStart').value=pp.s;
+document.getElementById('reportEnd').value=pp.e;
 document.getElementById('companyName').value=companyName;
 document.getElementById('companyDisasterRate').value=companyDisasterRate;
 document.getElementById('companyName').addEventListener('change',function(){companyName=this.value;saveData();});
@@ -549,10 +564,6 @@ function cycleStatus(date,idx){
   saveData();renderAttendance();
 }
 
-function timeInput(val,onchange){
-  return'<input type="time" step="1800" class="inp-time" value="'+val+'" onchange="'+onchange+'">';
-}
-
 function renderAttendance(){
   var date=document.getElementById('currentDate').value;
   var list=document.getElementById('attendanceList');
@@ -575,12 +586,12 @@ function renderAttendance(){
       +'<div class="emp-name">'+name+'</div><span class="emp-status '+statusClass+'">'+statusText+'</span></div>'
       +(isPresent(st)?
         (showAm?'<div class="time-section"><div class="time-section-label">上午</div><div class="time-row">'
-        +'<div class="time-field"><label>上班</label>'+timeInput(r.amIn,'updateRecord(\''+date+'\','+i+',\'amIn\',this.value)')+'</div>'
-        +'<div class="time-field"><label>下班</label>'+timeInput(r.amOut,'updateRecord(\''+date+'\','+i+',\'amOut\',this.value)')+'</div>'
+        +'<div class="time-field"><label>上班</label>'+timeSelect(r.amIn||s.stdAmIn,'updateRecord(\''+date+'\','+i+',\'amIn\',this.value)')+'</div>'
+        +'<div class="time-field"><label>下班</label>'+timeSelect(r.amOut||s.stdAmOut,'updateRecord(\''+date+'\','+i+',\'amOut\',this.value)')+'</div>'
         +'</div></div>':'')
         +(showPm?'<div class="time-section"><div class="time-section-label">下午</div><div class="time-row">'
-        +'<div class="time-field"><label>上班</label>'+timeInput(r.pmIn,'updateRecord(\''+date+'\','+i+',\'pmIn\',this.value)')+'</div>'
-        +'<div class="time-field"><label>下班</label>'+timeInput(r.pmOut,'updateRecord(\''+date+'\','+i+',\'pmOut\',this.value)')+'</div>'
+        +'<div class="time-field"><label>上班</label>'+timeSelect(r.pmIn||s.stdPmIn,'updateRecord(\''+date+'\','+i+',\'pmIn\',this.value)')+'</div>'
+        +'<div class="time-field"><label>下班</label>'+timeSelect(r.pmOut||s.stdPmOut,'updateRecord(\''+date+'\','+i+',\'pmOut\',this.value)')+'</div>'
         +'</div></div>':'')
         +badges:'')
       +'<textarea class="note-input" rows="1" placeholder="備註" onchange="updateRecord(\''+date+'\','+i+',\'note\',this.value)">'+r.note+'</textarea></div>';
@@ -634,8 +645,14 @@ function renderSalaryList(){
       +leaveRow
       +'<div class="card-row"><label>加班單價</label><input class="inp inp-sm" type="number" value="'+s.otRate+'" onchange="updateSalaryField('+i+',\'otRate\',this.value)"><span style="font-size:12px;color:var(--ink-faint);">元／每半小時</span></div>'
       +'<div class="divider"></div><div style="font-size:12px;color:var(--ink-faint);margin-bottom:6px;">標準上班時間</div>'
-      +'<div class="card-row"><label>上午</label><input type="time" step="1800" class="inp inp-time" value="'+s.stdAmIn+'" onchange="updateSalaryField('+i+',\'stdAmIn\',this.value)"> ～ <input type="time" step="1800" class="inp inp-time" value="'+s.stdAmOut+'" onchange="updateSalaryField('+i+',\'stdAmOut\',this.value)"></div>'
-      +'<div class="card-row"><label>下午</label><input type="time" step="1800" class="inp inp-time" value="'+s.stdPmIn+'" onchange="updateSalaryField('+i+',\'stdPmIn\',this.value)"> ～ <input type="time" step="1800" class="inp inp-time" value="'+s.stdPmOut+'" onchange="updateSalaryField('+i+',\'stdPmOut\',this.value)"></div>'
+      +'<div class="card-row"><label>上午</label>'
+      +'<select class="inp inp-time" onchange="updateSalaryField('+i+',\'stdAmIn\',this.value)">'+makeTimeOptions(s.stdAmIn)+'</select>'
+      +' ～ '
+      +'<select class="inp inp-time" onchange="updateSalaryField('+i+',\'stdAmOut\',this.value)">'+makeTimeOptions(s.stdAmOut)+'</select></div>'
+      +'<div class="card-row"><label>下午</label>'
+      +'<select class="inp inp-time" onchange="updateSalaryField('+i+',\'stdPmIn\',this.value)">'+makeTimeOptions(s.stdPmIn)+'</select>'
+      +' ～ '
+      +'<select class="inp inp-time" onchange="updateSalaryField('+i+',\'stdPmOut\',this.value)">'+makeTimeOptions(s.stdPmOut)+'</select></div>'
       +'<div class="divider"></div><div style="font-size:12px;color:var(--ink-faint);margin-bottom:6px;">固定項目（每次發薪自動帶入）</div>'
       +fixedHtml+'<button class="btn-sm btn-accent" style="margin-top:6px;" onclick="addFixedItem('+i+')">＋ 新增固定項目</button></div>';
   }).join('');
