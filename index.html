@@ -135,10 +135,7 @@ tbody tr:last-child td{border-bottom:none;}
 .daily-list-item{padding:10px 12px;border-bottom:1px solid var(--border);font-size:16px;letter-spacing:1px;}
 .daily-list-item:last-child{border-bottom:none;}
 
-/* ═══ 薪資單列印樣式 ═══
-   A4 = 210×297mm，margin 8mm 10mm → 可用 190×281mm
-   每格 = 95mm × 140mm (半寬 × 半高)
-*/
+/* ═══ 薪資單列印樣式 ═══ */
 .payslip-page{
   width:190mm;
   height:281mm;
@@ -183,6 +180,13 @@ tbody tr:last-child td{border-bottom:none;}
 .ps-row{display:flex;justify-content:space-between;padding:0.3mm 0;border-bottom:0.3px dotted #ddd;}
 .ps-row span:last-child{white-space:nowrap;margin-left:2mm;}
 .ps-spacer{flex:1;}
+.ps-employer-line{
+  display:flex;
+  justify-content:space-between;
+  color:#888;
+  flex-shrink:0;
+  padding-top:0.3mm;
+}
 .ps-total-line{
   flex-shrink:0;
   border-top:0.5px solid #999;
@@ -192,29 +196,15 @@ tbody tr:last-child td{border-bottom:none;}
   justify-content:space-between;
   font-weight:700;
 }
-.ps-employer-line{
-  display:flex;
-  justify-content:space-between;
-  color:#888;
-  flex-shrink:0;
-  padding-top:0.3mm;
-}
 
-/* 螢幕預覽時顯示陰影 */
 @media screen{
   .payslip-page{box-shadow:0 2px 10px rgba(0,0,0,0.12);margin-bottom:24px;}
 }
-
-/* 列印時隱藏非列印元素 */
 @media print{
   body{margin:0;padding:0;background:#fff;}
   .no-print{display:none!important;}
   .sticky-top{position:static;}
-  .payslip-page{
-    margin:0;
-    box-shadow:none;
-    border:none;
-  }
+  .payslip-page{margin:0;box-shadow:none;border:none;}
   .payslip-cell{border:0.5px solid #999;}
   @page{size:A4 portrait;margin:8mm 10mm;}
 }
@@ -756,8 +746,8 @@ function renderReportEmpChecks(){
 }
 function selectAllReportEmp(val){employees.forEach(function(_,i){var cb=document.getElementById('rep-emp-'+i);if(cb)cb.checked=val;});}
 function getSelectedReportEmps(){var sel=[];employees.forEach(function(_,i){var cb=document.getElementById('rep-emp-'+i);if(cb&&cb.checked)sel.push(i);});return sel;}
-    </script>
-    <script>
+</script>
+<script>
 function calcEmpPay(i,days,forceDeductIns,payStart,payEnd){
   var useDeduct=forceDeductIns!==undefined?forceDeductIns:deductInsurance;
   var s=getSalary(i);var ins=getInsurance(i);
@@ -793,32 +783,44 @@ function calcEmpPay(i,days,forceDeductIns,payStart,payEnd){
 }
 
 /* 根據總行數算字體縮放比（pt） */
-function calcPt(addCnt,deductCnt){
-  var total=addCnt+deductCnt+3;
-  if(total<=8) return 8.5;
-  if(total<=11) return 7.5;
-  if(total<=14) return 6.8;
+function calcPt(addCnt,deductCnt,employerCnt){
+  var total=addCnt+deductCnt+employerCnt+4;
+  if(total<=10) return 8.5;
+  if(total<=13) return 7.5;
+  if(total<=16) return 6.8;
   return 6.0;
 }
 
 function buildCell(p,start,end,company){
-  var pt=calcPt(p.addItems.length,p.deductItems.length);
+  // 計算雇主負擔行數
+  var employerCnt=0;
+  if(deductInsurance){
+    if(p.laborEnabled)employerCnt++;
+    if(p.healthEnabled)employerCnt++;
+  }
+  var pt=calcPt(p.addItems.length,p.deductItems.length,employerCnt);
+  var sectionPt=Math.max(pt-1,5.5);
+
   var addHtml=p.addItems.map(function(r){
     return'<div class="ps-row" style="font-size:'+pt+'pt"><span>'+r.name+'</span><span>'+r.amount.toLocaleString()+'</span></div>';
   }).join('');
   var deductHtml=p.deductItems.map(function(r){
     return'<div class="ps-row" style="font-size:'+pt+'pt"><span>'+r.name+'</span><span>-'+r.amount.toLocaleString()+'</span></div>';
   }).join('');
-  var sectionPt=Math.max(pt-1,5.5);
-  var addSection=addHtml?'<div class="ps-section-label" style="font-size:'+sectionPt+'pt">▌應付項目</div>'
+
+  var addSection='<div class="ps-section-label" style="font-size:'+sectionPt+'pt">▌應付項目</div>'
     +'<div class="ps-row" style="font-size:'+pt+'pt"><span>'+p.baseLabel+'</span><span>'+p.basePay.toLocaleString()+'</span></div>'
-    +addHtml:'';
+    +addHtml;
   var deductSection=deductHtml?'<div class="ps-section-label" style="font-size:'+sectionPt+'pt">▌應扣項目</div>'+deductHtml:'';
+
+  // 雇主負擔 → 放在實領上面（spacer 之後、實領之前）
   var employerHtml='';
-  if(deductInsurance){
-    if(p.laborEnabled)employerHtml+='<div class="ps-employer-line" style="font-size:'+(pt-1)+'pt"><span>雇主負擔勞保</span><span>'+p.laborEmployer.toLocaleString()+'</span></div>';
-    if(p.healthEnabled)employerHtml+='<div class="ps-employer-line" style="font-size:'+(pt-1)+'pt"><span>雇主負擔健保</span><span>'+p.healthEmployer.toLocaleString()+'</span></div>';
+  if(deductInsurance&&employerCnt>0){
+    employerHtml+='<div class="ps-section-label" style="font-size:'+sectionPt+'pt">▌雇主負擔（參考）</div>';
+    if(p.laborEnabled)employerHtml+='<div class="ps-employer-line" style="font-size:'+(pt-0.5)+'pt"><span>雇主負擔勞保</span><span>'+p.laborEmployer.toLocaleString()+'</span></div>';
+    if(p.healthEnabled)employerHtml+='<div class="ps-employer-line" style="font-size:'+(pt-0.5)+'pt"><span>雇主負擔健保</span><span>'+p.healthEmployer.toLocaleString()+'</span></div>';
   }
+
   return'<div class="payslip-cell">'
     +'<div class="ps-header">'
     +'<div class="ps-company">'+company+'</div>'
@@ -829,12 +831,12 @@ function buildCell(p,start,end,company){
     +addSection
     +deductSection
     +'<div class="ps-spacer"></div>'
+    +employerHtml
     +'</div>'
-    +'<div class="ps-total-line">'
+    +'<div class="ps-total-line" style="font-size:'+(pt+2)+'pt">'
     +'<span>實領金額</span>'
     +'<span>'+p.netPay.toLocaleString()+' 元</span>'
     +'</div>'
-    +employerHtml
     +'</div>';
 }
 
