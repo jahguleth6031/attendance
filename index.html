@@ -181,7 +181,9 @@ table.data-table tbody tr:last-child td{border-bottom:none;}
 .ps-company{font-size:10pt;font-weight:700;letter-spacing:2px;}
 .ps-name{font-size:13pt;font-weight:700;margin-top:1mm;}
 .ps-period{font-size:8pt;color:#666;margin-top:0.5mm;}
-.ps-body{flex:0 0 auto;}
+.ps-body{flex:0 0 auto;overflow-wrap:anywhere;}
+.ps-row span:first-child{min-width:0;overflow-wrap:anywhere;}
+.ps-inner{box-sizing:border-box;}
 .ps-section-label{font-size:7pt;color:#888;margin-top:1.5mm;margin-bottom:0.5mm;letter-spacing:1px;}
 .ps-row{display:flex;justify-content:space-between;padding:0.4mm 0;border-bottom:0.3px dotted #ddd;}
 .ps-row span:last-child{white-space:nowrap;margin-left:2mm;}
@@ -221,7 +223,8 @@ table.data-table tbody tr:last-child td{border-bottom:none;}
 <div class="header no-print">
   <h1>出勤薪資管理系統</h1>
   <div class="subtitle">Attendance & Payroll System</div>
-  <div id="syncBadge" class="sync-badge ok">☁ 雲端同步</div>
+  <div id="syncBadge" class="sync-badge saving">等待載入</div>
+  <button class="btn-logout" onclick="flushSave().catch(function(e){alert(e.message);})">重試儲存</button> <button class="btn-logout" onclick="loadData()">重新讀取</button>
   <div id="userBar" class="user-bar" style="display:none;">
     <img id="userAvatar" src="" alt="">
     <span id="userName"></span>
@@ -315,7 +318,7 @@ table.data-table tbody tr:last-child td{border-bottom:none;}
       <span style="font-size:12px;color:var(--accent);">%（全公司共用）</span>
     </div>
     <div style="font-size:11px;color:var(--accent);margin-top:4px;line-height:1.6;">
-      勞保個人自付：投保薪資×2.5%　雇主：投保薪資×8.8996%+職災<br>
+      勞保按普通事故及就保分項四捨五入；雇主另加職災一次<br>
       健保個人自付：月投保金額×5.17%×30%×(1+眷屬)　雇主：×5.17%×60%
     </div>
   </div>
@@ -338,7 +341,7 @@ table.data-table tbody tr:last-child td{border-bottom:none;}
       <div id="insDeductBanner" class="ins-deduct-banner">⚠️ 本次薪資單將扣除勞保、健保及勞退自提撥</div>
       <div class="card-row" style="margin-top:8px;gap:8px;">
         <button class="btn-sm btn-primary" style="flex:1;padding:10px;" onclick="generatePayslip()">產生薪資單</button>
-        <button class="btn-sm btn-green" style="flex:1;padding:10px;" onclick="window.print()">列印／存PDF</button>
+        <button class="btn-sm btn-green" style="flex:1;padding:10px;" onclick="printCurrentDocument()">列印／存PDF</button>
       </div>
     </div>
   </div>
@@ -373,7 +376,7 @@ table.data-table tbody tr:last-child td{border-bottom:none;}
     </div>
     <div id="reportWrap"><div class="empty-hint">請選擇員工與日期區間後產生報表</div></div>
     <div id="simplePrintBar" style="display:none;" class="no-print">
-      <button class="btn-sm btn-green" style="width:100%;padding:12px;font-size:14px;" onclick="window.print()">列印／存PDF</button>
+      <button class="btn-sm btn-green" style="width:100%;padding:12px;font-size:14px;" onclick="printCurrentDocument()">列印／存PDF</button>
     </div>
   </div>
 </div>
@@ -394,11 +397,11 @@ table.data-table tbody tr:last-child td{border-bottom:none;}
   <div class="backup-panel">
     <div class="backup-card" style="background:var(--present-bg);border-color:var(--present);">
       <h3>☁ 雲端同步已啟用</h3>
-      <p>資料自動儲存至 Firebase 雲端，所有裝置即時同步，不需手動備份。</p>
+      <p>同一 Google 帳號的裝置會接收雲端更新；發生同時編輯時會阻止覆蓋。雲端同步不等於歷史備份，重要操作前請匯出 JSON。</p>
     </div>
     <div class="backup-card" style="background:var(--accent-bg);border-color:var(--accent);">
       <h3>📥 匯入舊備份（一次性）</h3>
-      <p>選擇之前匯出的 .json 備份檔，資料會自動上傳至雲端，之後所有裝置都能看到。</p>
+      <p>選擇之前匯出的 .json 備份檔，資料會上傳至目前帳號的雲端，登入相同帳號的裝置可讀取。</p>
       <label class="btn-full" style="background:var(--accent);color:#fff;display:block;text-align:center;padding:11px;cursor:pointer;border-radius:3px;">
         選擇備份檔案上傳至雲端
         <input type="file" accept=".json" onchange="importBackup(this)" style="display:none">
@@ -433,21 +436,13 @@ function signOut(){
 }
 
 auth.onAuthStateChanged(function(user){
-  if(user){
-    currentUser=user;
-    document.getElementById('loginScreen').style.display='none';
-    document.getElementById('loadingOverlay').style.display='flex';
-    var bar=document.getElementById('userBar');
-    document.getElementById('userAvatar').src=user.photoURL||'';
-    document.getElementById('userName').textContent=user.displayName||user.email;
-    bar.style.display='flex';
-    loadData();
-  }else{
-    currentUser=null;
-    document.getElementById('loginScreen').style.display='flex';
-    document.getElementById('loadingOverlay').style.display='none';
-    document.getElementById('userBar').style.display='none';
-  }
+  sessionEpoch++;clearTimeout(saveTimer);if(stopLiveSync){stopLiveSync();stopLiveSync=null;}
+  dataReady=false;pendingSave=false;syncConflict=false;loadedRevision=null;
+  resetAppData();currentUser=user||null;
+  document.getElementById('loginScreen').style.display=user?'none':'flex';
+  document.getElementById('userBar').style.display=user?'flex':'none';
+  document.getElementById('loadingOverlay').style.display=user?'flex':'none';
+  if(user){document.getElementById('userAvatar').src=user.photoURL||'';document.getElementById('userName').textContent=user.displayName||user.email;loadData();}
 });
 
 /* ══ 同步狀態顯示 ══ */
@@ -525,8 +520,10 @@ function initUI(){
   document.getElementById('reportStart').value=pp.s;document.getElementById('reportEnd').value=pp.e;
   document.getElementById('companyName').value=companyName;
   document.getElementById('companyDisasterRate').value=companyDisasterRate;
-  document.getElementById('companyName').addEventListener('change',function(){companyName=this.value;saveData();});
-  document.getElementById('companyDisasterRate').addEventListener('change',function(){companyDisasterRate=parseFloat(this.value)||0.1496;saveData();renderInsuranceList();});
+  document.getElementById('companyName').onchange=function(){companyName=this.value;saveData();};
+  document.getElementById('companyDisasterRate').onchange=function(){var n=Number(this.value);if(!Number.isFinite(n)||n<0||n>100){alert('請輸入 0–100 的費率');this.value=companyDisasterRate;return;}companyDisasterRate=n;saveData();renderInsuranceList();};
+  document.getElementById('insToggleBtn').className='toggle-btn '+(deductInsurance?'on':'off');
+  document.getElementById('insDeductBanner').className='ins-deduct-banner'+(deductInsurance?' active':'');
   renderAttendance();renderEmpManager();renderSalaryList();renderInsuranceList();renderChangeItemList();renderReportEmpChecks();renderCostYearSelect();
   setSyncBadge('ok');
 }
@@ -657,7 +654,7 @@ function renderAttendance(){
     var showAm=st==='full'||st==='am';var showPm=st==='full'||st==='pm';
     return'<div class="emp-card '+cardClass+'">'
       +'<div class="emp-top"><button class="check-btn '+btnClass+'" onclick="cycleStatus(\''+date+'\','+i+')">'+btnText+'</button>'
-      +'<div class="emp-name">'+name+'</div><span class="emp-status '+statusClass+'">'+statusText+'</span></div>'
+      +'<div class="emp-name">'+escapeHTML(name)+'</div><span class="emp-status '+statusClass+'">'+statusText+'</span></div>'
       +(isPresent(st)?
         (showAm?'<div class="time-section"><div class="time-section-label">上午</div><div class="time-row">'
         +'<div class="time-field"><label>上班</label>'+timeSelect(r.amIn||s.stdAmIn,'updateRecord(\''+date+'\','+i+',\'amIn\',this.value)')+'</div>'
@@ -668,7 +665,7 @@ function renderAttendance(){
         +'<div class="time-field"><label>下班</label>'+timeSelect(r.pmOut||s.stdPmOut,'updateRecord(\''+date+'\','+i+',\'pmOut\',this.value)')+'</div>'
         +'</div></div>':'')
         +badges:'')
-      +'<textarea class="note-input" rows="1" placeholder="備註" onchange="updateRecord(\''+date+'\','+i+',\'note\',this.value)">'+r.note+'</textarea></div>';
+      +'<textarea class="note-input" rows="1" placeholder="備註" onchange="updateRecord(\''+date+'\','+i+',\'note\',this.value)">'+escapeHTML(r.note)+'</textarea></div>';
   }).join('');
   updateSummary(date);
 }
@@ -688,8 +685,8 @@ function showDailyList(){
   var wrap=document.getElementById('dailyListWrap');
   if(presentList.length===0){wrap.innerHTML='<div class="daily-list"><div class="daily-list-title">'+date+'</div><div class="daily-list-sub">今日無人出勤</div></div>';wrap.style.display='block';return;}
   wrap.innerHTML='<div class="daily-list"><div class="daily-list-title">'+date+'　出勤名單</div><div class="daily-list-sub">共 '+presentList.length+' 人出勤</div>'
-    +presentList.map(function(name,j){return'<div class="daily-list-item">'+(j+1)+'．'+name+'</div>';}).join('')
-    +'<div style="margin-top:12px;" class="no-print"><button class="btn-sm btn-green" style="width:100%;padding:10px;" onclick="window.print()">列印</button></div></div>';
+    +presentList.map(function(name,j){return'<div class="daily-list-item">'+(j+1)+'．'+escapeHTML(name)+'</div>';}).join('')
+    +'<div style="margin-top:12px;" class="no-print"><button class="btn-sm btn-green" style="width:100%;padding:10px;" onclick="printCurrentDocument()">列印</button></div></div>';
   wrap.style.display='block';
 }
 
@@ -701,7 +698,7 @@ function renderEmpManager(){
     return'<div class="emp-row-manage" draggable="true" data-idx="'+i+'">'
       +'<div class="emp-row-drag">⠿</div>'
       +'<div class="emp-row-num">'+(i+1)+'</div>'
-      +'<input class="emp-row-name-input" value="'+name+'" onchange="renameEmployee('+i+',this.value)">'
+      +'<input class="emp-row-name-input" value="'+escapeHTML(name)+'" onchange="renameEmployee('+i+',this.value)">'
       +'<button class="btn-del" onclick="deleteEmployee('+i+')">刪除</button></div>';
   }).join('');
   initDragSort();
@@ -709,7 +706,7 @@ function renderEmpManager(){
 
 function addEmployee(){var inp=document.getElementById('newEmpName');var name=inp.value.trim();if(!name)return;employees.push(name);inp.value='';saveData();renderEmpManager();}
 function renameEmployee(i,name){if(name.trim()){employees[i]=name.trim();saveData();}}
-function deleteEmployee(i){if(!confirm('確定刪除「'+employees[i]+'」？'))return;employees.splice(i,1);saveData();renderEmpManager();}
+function deleteEmployee(i){if(!confirm('確定刪除「'+escapeHTML(employees[i])+'」？'))return;employees.splice(i,1);saveData();renderEmpManager();}
 
 function initDragSort(){
   var list=document.getElementById('empListManage');
@@ -843,9 +840,9 @@ function renderSalaryList(){
   if(employees.length===0){w.innerHTML='<div class="empty-hint">請先新增員工</div>';return;}
   w.innerHTML=employees.map(function(name,i){
     var s=getSalary(i);
-    var fixedHtml=s.fixedItems.map(function(f,j){return'<div class="change-item"><input class="inp" style="flex:1" value="'+f.name+'" placeholder="項目名稱" onchange="updateFixedItem('+i+','+j+',\'name\',this.value)"><input class="inp inp-sm" type="number" value="'+f.amount+'" onchange="updateFixedItem('+i+','+j+',\'amount\',this.value)"><button class="btn-sm btn-red" onclick="removeFixedItem('+i+','+j+')">✕</button></div>';}).join('');
+    var fixedHtml=s.fixedItems.map(function(f,j){return'<div class="change-item"><input class="inp" style="flex:1" value="'+escapeHTML(f.name)+'" placeholder="項目名稱" onchange="updateFixedItem('+i+','+j+',\'name\',this.value)"><input class="inp inp-sm" type="number" value="'+f.amount+'" onchange="updateFixedItem('+i+','+j+',\'amount\',this.value)"><button class="btn-sm btn-red" onclick="removeFixedItem('+i+','+j+')">✕</button></div>';}).join('');
     var leaveRow=s.type==='monthly'?'<div class="card-row"><label>每月可休</label><input class="inp inp-sm" type="number" value="'+s.monthlyLeaveDays+'" placeholder="0" onchange="updateSalaryField('+i+',\'monthlyLeaveDays\',this.value)"><span style="font-size:12px;color:var(--ink-faint);">天（超休扣薪用）</span></div>':'';
-    return'<div class="card"><div class="row-between"><div class="emp-salary-name">'+name+'</div><span class="tag '+(s.type==='monthly'?'tag-monthly':'tag-daily')+'">'+(s.type==='monthly'?'月薪':'日薪')+'</span></div>'
+    return'<div class="card"><div class="row-between"><div class="emp-salary-name">'+escapeHTML(name)+'</div><span class="tag '+(s.type==='monthly'?'tag-monthly':'tag-daily')+'">'+(s.type==='monthly'?'月薪':'日薪')+'</span></div>'
       +'<div class="card-row"><label>薪資制</label><select class="inp" onchange="updateSalaryField('+i+',\'type\',this.value)"><option value="monthly"'+(s.type==='monthly'?' selected':'')+'>月薪</option><option value="daily"'+(s.type==='daily'?' selected':'')+'>日薪</option></select><label>'+(s.type==='monthly'?'月薪':'日薪')+'金額</label><input class="inp inp-md" type="number" value="'+s.base+'" onchange="updateSalaryField('+i+',\'base\',this.value)"></div>'
       +'<div class="card-row"><label>平均日薪</label><input class="inp inp-md" type="number" value="'+s.dailyWage+'" placeholder="遲到早退用" onchange="updateSalaryField('+i+',\'dailyWage\',this.value)"><span style="font-size:11px;color:var(--ink-faint);">遲到早退／超休計算用</span></div>'
       +leaveRow
@@ -878,7 +875,7 @@ function renderInsuranceList(){
     var pensionHtml=ins.pensionEnabled?'<div class="ins-row"><label>提撥薪資</label><input class="inp inp-md" type="number" value="'+ins.pensionSalary+'" onchange="updateIns('+i+',\'pensionSalary\',this.value)"><span style="font-size:12px;color:var(--ink-faint);">（獨立設定）</span></div>'
       +'<div class="ins-row"><label>自提撥比率</label><input class="inp inp-sm" type="number" value="'+ins.pensionRate+'" min="0" max="6" onchange="updateIns('+i+',\'pensionRate\',this.value)"><span style="font-size:12px;color:var(--ink-faint);">%（0-6%）</span></div>'
       +'<div class="ins-row"><label>　自提撥金額</label><span style="color:var(--absent);">'+pension.toLocaleString()+' 元／月</span></div>':'';
-    return'<div class="card"><div class="emp-salary-name">'+name+'</div>'
+    return'<div class="card"><div class="emp-salary-name">'+escapeHTML(name)+'</div>'
       +'<div class="toggle-row"><label>勞保</label><button class="toggle-btn '+(ins.laborEnabled?'on':'off')+'" onclick="toggleIns('+i+',\'laborEnabled\')"></button></div>'+laborHtml
       +'<div class="divider"></div><div class="toggle-row"><label>健保</label><button class="toggle-btn '+(ins.healthEnabled?'on':'off')+'" onclick="toggleIns('+i+',\'healthEnabled\')"></button></div>'+healthHtml
       +'<div class="divider"></div><div class="toggle-row"><label>勞退自提撥</label><button class="toggle-btn '+(ins.pensionEnabled?'on':'off')+'" onclick="toggleIns('+i+',\'pensionEnabled\')"></button></div>'+pensionHtml+'</div>';
@@ -891,7 +888,7 @@ function showBatchPanel(idx){
   var item=changeItems.items[idx];var w=document.getElementById('batchPanel-'+idx);
   if(w.style.display==='none'||!w.style.display){
     w.innerHTML='<div style="font-size:13px;color:var(--accent);font-weight:500;margin-bottom:8px;">選擇要加入此異動的員工：</div>'
-      +employees.map(function(name,i){return'<div class="emp-check-row"><input type="checkbox" id="bc-'+idx+'-'+i+'" '+(item.amounts&&item.amounts[i]!==undefined?'checked':'')+'><label for="bc-'+idx+'-'+i+'">'+name+'</label></div>';}).join('')
+      +employees.map(function(name,i){return'<div class="emp-check-row"><input type="checkbox" id="bc-'+idx+'-'+i+'" '+(item.amounts&&item.amounts[i]!==undefined?'checked':'')+'><label for="bc-'+idx+'-'+i+'">'+escapeHTML(name)+'</label></div>';}).join('')
       +'<div style="display:flex;gap:8px;margin-top:10px;"><button class="btn-sm btn-primary" style="flex:1;" onclick="applyBatch('+idx+')">確認加入</button><button class="btn-sm" style="flex:1;background:var(--bg);border:1px solid var(--border);" onclick="closeBatch('+idx+')">取消</button></div>';
     w.style.display='block';
   }else{w.style.display='none';}
@@ -908,9 +905,9 @@ function renderChangeItemList(){
   if(items.length===0){w.innerHTML='<div class="empty-hint">尚無異動項目</div>';return;}
   w.innerHTML=items.map(function(item,idx){
     var empRows=Object.keys(item.amounts||{}).map(function(iStr){var i=parseInt(iStr);if(i>=employees.length)return'';var val=item.amounts[i]||0;
-      return'<div class="ins-row"><label style="min-width:70px;">'+employees[i]+'</label><input class="inp inp-md" type="number" value="'+val+'" placeholder="0" onchange="updateChangeAmount('+idx+','+i+',this.value)"><span style="font-size:12px;color:var(--ink-faint);">元</span></div>';}).join('');
+      return'<div class="ins-row"><label style="min-width:70px;">'+escapeHTML(employees[i])+'</label><input class="inp inp-md" type="number" value="'+val+'" placeholder="0" onchange="updateChangeAmount('+idx+','+i+',this.value)"><span style="font-size:12px;color:var(--ink-faint);">元</span></div>';}).join('');
     if(!empRows)empRows='<div style="font-size:12px;color:var(--ink-faint);padding:6px 0;">尚未加入任何員工，請點「批次加入」</div>';
-    return'<div class="card"><div class="row-between"><div style="font-size:15px;font-weight:500;">'+item.name+'<span style="font-size:12px;color:'+(item.type==='add'?'var(--present)':'var(--absent)')+';margin-left:8px;">'+(item.type==='add'?'▲應付':'▼應扣')+'</span></div>'
+    return'<div class="card"><div class="row-between"><div style="font-size:15px;font-weight:500;">'+escapeHTML(item.name)+'<span style="font-size:12px;color:'+(item.type==='add'?'var(--present)':'var(--absent)')+';margin-left:8px;">'+(item.type==='add'?'▲應付':'▼應扣')+'</span></div>'
       +'<div style="display:flex;gap:6px;"><button class="btn-sm btn-accent" onclick="showBatchPanel('+idx+')">批次加入</button><button class="btn-sm btn-red" onclick="removeChangeItem('+idx+')">刪除</button></div></div>'
       +'<div class="batch-panel" id="batchPanel-'+idx+'" style="display:none;margin-top:8px;"></div><div class="divider"></div>'+empRows+'</div>';
   }).join('');
@@ -921,7 +918,7 @@ function updateChangeAmount(idx,empIdx,val){if(!changeItems.items[idx].amounts)c
 
 function renderReportEmpChecks(){
   var w=document.getElementById('reportEmpChecks');if(!w)return;
-  w.innerHTML=employees.map(function(name,i){return'<div class="emp-check-row"><input type="checkbox" id="rep-emp-'+i+'" checked><label for="rep-emp-'+i+'">'+name+'</label></div>';}).join('');
+  w.innerHTML=employees.map(function(name,i){return'<div class="emp-check-row"><input type="checkbox" id="rep-emp-'+i+'" checked><label for="rep-emp-'+i+'">'+escapeHTML(name)+'</label></div>';}).join('');
 }
 function selectAllReportEmp(val){employees.forEach(function(_,i){var cb=document.getElementById('rep-emp-'+i);if(cb)cb.checked=val;});}
 function getSelectedReportEmps(){var sel=[];employees.forEach(function(_,i){var cb=document.getElementById('rep-emp-'+i);if(cb&&cb.checked)sel.push(i);});return sel;}
@@ -968,8 +965,8 @@ function buildCell(p,start,end,company){
   if(deductInsurance){if(p.laborEnabled)empCnt++;if(p.healthEnabled)empCnt++;}
   var pt=calcPt(p.addItems.length,p.deductItems.length,empCnt);
   var sp=Math.max(pt-1,5.5);
-  var addHtml=p.addItems.map(function(r){return'<div class="ps-row" style="font-size:'+pt+'pt"><span>'+r.name+'</span><span>'+r.amount.toLocaleString()+'</span></div>';}).join('');
-  var deductHtml=p.deductItems.map(function(r){return'<div class="ps-row" style="font-size:'+pt+'pt"><span>'+r.name+'</span><span>-'+r.amount.toLocaleString()+'</span></div>';}).join('');
+  var addHtml=p.addItems.map(function(r){return'<div class="ps-row" style="font-size:'+pt+'pt"><span>'+escapeHTML(r.name)+'</span><span>'+r.amount.toLocaleString()+'</span></div>';}).join('');
+  var deductHtml=p.deductItems.map(function(r){return'<div class="ps-row" style="font-size:'+pt+'pt"><span>'+escapeHTML(r.name)+'</span><span>-'+r.amount.toLocaleString()+'</span></div>';}).join('');
   var employerHtml='';
   if(deductInsurance&&empCnt>0){
     employerHtml='<div class="ps-section-label" style="font-size:'+sp+'pt">▌雇主負擔（參考）</div>';
@@ -977,10 +974,10 @@ function buildCell(p,start,end,company){
     if(p.healthEnabled)employerHtml+='<div class="ps-employer-line" style="font-size:'+pt+'pt"><span>雇主負擔健保</span><span>'+p.healthEmployer.toLocaleString()+'</span></div>';
   }
   var inner='<div class="ps-inner">'
-    +'<div class="ps-header"><div class="ps-company">'+company+'</div><div class="ps-name">'+p.name+'</div><div class="ps-period">'+start+' ～ '+end+'</div></div>'
+    +'<div class="ps-header"><div class="ps-company">'+escapeHTML(company)+'</div><div class="ps-name">'+escapeHTML(p.name)+'</div><div class="ps-period">'+start+' ～ '+end+'</div></div>'
     +'<div class="ps-body">'
     +'<div class="ps-section-label" style="font-size:'+sp+'pt">▌應付項目</div>'
-    +'<div class="ps-row" style="font-size:'+pt+'pt"><span>'+p.baseLabel+'</span><span>'+p.basePay.toLocaleString()+'</span></div>'
+    +'<div class="ps-row" style="font-size:'+pt+'pt"><span>'+escapeHTML(p.baseLabel)+'</span><span>'+p.basePay.toLocaleString()+'</span></div>'
     +addHtml
     +(deductHtml?'<div class="ps-section-label" style="font-size:'+sp+'pt">▌應扣項目</div>'+deductHtml:'')
     +employerHtml
@@ -1032,7 +1029,7 @@ function generatePersonalReport(){
         +'<td>'+(isPresent(r.status)&&(r.status==='full'||r.status==='pm')?r.pmIn+'-'+r.pmOut:'—')+'</td>'
         +'<td>'+(ot.totalOT>0?ot.totalOT+'hr':'—')+'</td>'
         +'<td>'+(ld.amount>0?'-'+ld.amount:'—')+'</td>'
-        +'<td>'+(r.note||'—')+'</td></tr>';
+        +'<td>'+escapeHTML(r.note||'—')+'</td></tr>';
     }).join('');
     var salaryHtml='';
     if(inclSalary){
@@ -1040,12 +1037,12 @@ function generatePersonalReport(){
       if(relevant.length>0){
         salaryHtml='<div style="margin-top:10px;"><div style="font-size:13px;font-weight:500;margin-bottom:4px;">薪資紀錄</div>'
           +'<div class="report-table-wrap"><table class="data-table"><thead><tr><th>發薪區間</th><th>實領金額</th></tr></thead><tbody>'
-          +relevant.map(function(h){var p=calcEmpPay(empIdx,getDays(h.start,h.end),false,h.start,h.end);return'<tr><td>'+h.start+'～'+h.end+'</td><td style="text-align:right;">'+p.netPay.toLocaleString()+' 元</td></tr>';}).join('')
+          +relevant.map(function(h){var p=historyPayFor(h,empIdx);return'<tr><td>'+escapeHTML(h.start)+'～'+escapeHTML(h.end)+'</td><td style="text-align:right;">'+(p?p.netPay.toLocaleString()+' 元':(h.pays?'此期未列入':'舊紀錄未保存個人實領，請參考當時 PDF'))+'</td></tr>';}).join('')
           +'</tbody></table></div></div>';
       }
     }
     html+='<div style="background:var(--paper);padding:14px;border:1.5px solid var(--border);border-radius:4px;margin-bottom:12px;">'
-      +'<div style="font-size:16px;font-weight:700;margin-bottom:4px;">'+name+'　出勤報表</div>'
+      +'<div style="font-size:16px;font-weight:700;margin-bottom:4px;">'+escapeHTML(name)+'　出勤報表</div>'
       +'<div style="font-size:12px;color:var(--ink-faint);margin-bottom:12px;">'+start+' ～ '+end+'　出勤 '+attendDays+' 天　加班 '+totalOTHours+' 小時'+(totalLate>0?'　遲扣 '+totalLate+' 元':'')+'</div>'
       +'<div class="report-table-wrap"><table class="data-table"><thead><tr><th>日期</th><th>狀態</th><th>上午</th><th>下午</th><th>加班</th><th>遲扣</th><th>備註</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
       +salaryHtml+'</div>';
@@ -1062,7 +1059,7 @@ function previewSimpleReport(){
   var rows=selEmps.map(function(empIdx){
     var count=0,otH=0,lateAmt=0;
     days.forEach(function(d){var r=getRecord(d,empIdx);var s=getSalary(empIdx);if(isPresent(r.status)){count+=attendDayCount(r.status);otH+=calcOT(r,s).totalOT;lateAmt+=calcLateDeduct(r,s).amount;}});
-    return'<div class="preview-simple-row"><div><div class="preview-simple-name">'+employees[empIdx]+'</div>'
+    return'<div class="preview-simple-row"><div><div class="preview-simple-name">'+escapeHTML(employees[empIdx])+'</div>'
       +(otH>0?'<div class="preview-simple-ot">加班 '+otH+' 小時</div>':'')
       +(lateAmt>0?'<div style="font-size:12px;color:var(--absent);margin-top:2px;">遲到早退扣 '+lateAmt+' 元</div>':'')
       +'</div><div class="preview-simple-days">'+count+' 天</div></div>';
@@ -1131,6 +1128,274 @@ function clearAll(){
   saveData();alert('已清除');
   renderAttendance();renderEmpManager();renderSalaryList();renderInsuranceList();renderChangeItemList();renderReportEmpChecks();renderCostYearSelect();
 }
+</script>
+<script>
+/* Attendance reliability update, 2026-09-15.
+ * The indexed legacy schema is retained for rollback compatibility.
+ * employeeIds provides stable identities for newly captured payroll snapshots.
+ */
+var employeeIds=[], dataReady=false, pendingSave=false, syncConflict=false;
+var loadedRevision=null, sessionEpoch=0, savePromise=null, stopLiveSync=null;
+var localChangeVersion=0;
+
+function escapeHTML(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function cloneData(value){return JSON.parse(JSON.stringify(value));}
+function newEmployeeId(){return typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'emp-'+Date.now()+'-'+Math.random().toString(36).slice(2);}
+function ensureEmployeeIds(){employees.forEach(function(_,i){if(!employeeIds[i])employeeIds[i]=newEmployeeId();});employeeIds.length=employees.length;}
+function captureData(){
+  ensureEmployeeIds();
+  return cloneData({employees:employees,employeeIds:employeeIds,records:records,salarySettings:salarySettings,insuranceSettings:insuranceSettings,changeItems:changeItems,companyName:companyName,payrollHistory:payrollHistory,companyDisasterRate:companyDisasterRate,schemaVersion:2});
+}
+function resetAppData(){
+  employees=[];employeeIds=[];records={};salarySettings={};insuranceSettings={};changeItems={};companyName='';payrollHistory=[];companyDisasterRate=0.1496;deductInsurance=false;
+  ['attendanceList','empListManage','salaryList','insuranceList','changeItemList','reportWrap','payslipPages','costReport','dailyListWrap'].forEach(function(id){var el=document.getElementById(id);if(el)el.textContent='';});
+}
+function validateBackup(d){
+  if(!d||!Array.isArray(d.employees)||!d.employees.every(function(x){return typeof x==='string';}))throw Error('員工名單格式錯誤');
+  function inspect(v,depth){
+    if(depth>25)throw Error('資料層次過深');
+    if(typeof v==='number'&&!Number.isFinite(v))throw Error('金額含無效數字');
+    if(v&&typeof v==='object')Object.keys(v).forEach(function(k){if(['__proto__','constructor','prototype'].indexOf(k)>=0)throw Error('資料含不安全欄位');inspect(v[k],depth+1);});
+  }
+  inspect(d,0);
+  function numericFields(obj,keys){keys.forEach(function(k){if(obj[k]!=null&&(typeof obj[k]!=='number'||!Number.isFinite(obj[k])))throw Error(k+' 必須是數字');});}
+  ['records','salarySettings','insuranceSettings','changeItems'].forEach(function(k){if(d[k]!=null&&(typeof d[k]!=='object'||Array.isArray(d[k])))throw Error(k+' 格式錯誤');});
+  if(d.payrollHistory!=null&&!Array.isArray(d.payrollHistory))throw Error('歷史紀錄格式錯誤');
+  if(d.employeeIds!=null&&(!Array.isArray(d.employeeIds)||d.employeeIds.length!==d.employees.length||!d.employeeIds.every(function(x){return typeof x==='string'&&x.length>0;})||new Set(d.employeeIds).size!==d.employeeIds.length))throw Error('員工識別碼格式錯誤');
+  Object.values(d.salarySettings||{}).forEach(function(s){if(!s||typeof s!=='object'||(s.fixedItems&&!Array.isArray(s.fixedItems)))throw Error('薪資設定格式錯誤');});
+  Object.values(d.salarySettings||{}).forEach(function(s){numericFields(s,['base','dailyWage','monthlyLeaveDays','otRate']);(s.fixedItems||[]).forEach(function(f){if(!f||typeof f.name!=='string')throw Error('固定項目格式錯誤');numericFields(f,['amount']);});});
+  Object.values(d.insuranceSettings||{}).forEach(function(ins){if(!ins||typeof ins!=='object')throw Error('勞健保格式錯誤');numericFields(ins,['laborSalary','healthSalary','dependents','pensionRate','pensionSalary']);});
+  if(d.changeItems&&d.changeItems.items&&!Array.isArray(d.changeItems.items))throw Error('異動項目格式錯誤');
+  (d.changeItems&&d.changeItems.items||[]).forEach(function(item){if(!item||typeof item.name!=='string'||['add','deduct'].indexOf(item.type)<0)throw Error('異動項目格式錯誤');Object.values(item.amounts||{}).forEach(function(v){if(typeof v!=='number'||!Number.isFinite(v))throw Error('異動金額格式錯誤');});});
+  (d.payrollHistory||[]).forEach(function(h){if(!h||typeof h.start!=='string'||typeof h.end!=='string')throw Error('歷史日期格式錯誤');numericFields(h,['total']);(h.pays||[]).forEach(function(p){numericFields(p,['basePay','netPay','totalAdd','totalDeduct','laborEmployer','healthEmployer']);(p.addItems||[]).concat(p.deductItems||[]).forEach(function(item){numericFields(item,['amount']);});});});
+  Object.keys(d.records||{}).forEach(function(date){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('出勤日期格式錯誤');
+    if(!d.records[date]||typeof d.records[date]!=='object')throw Error('出勤紀錄格式錯誤');
+    Object.values(d.records[date]).forEach(function(r){if(!r||typeof r!=='object')throw Error('出勤紀錄格式錯誤');if(r.status&&['absent','full','am','pm'].indexOf(r.status)<0)throw Error('未知出勤狀態');});
+  });
+  return d;
+}
+function applyData(d){
+  validateBackup(d);
+  var nextSalary={},nextInsurance={},nextRecords={};
+  Object.keys(d.salarySettings||{}).forEach(function(i){nextSalary[i]=migrateSalary(d.salarySettings[i]);});
+  Object.keys(d.insuranceSettings||{}).forEach(function(i){nextInsurance[i]=migrateInsurance(d.insuranceSettings[i]);});
+  Object.keys(d.records||{}).forEach(function(date){nextRecords[date]={};Object.keys(d.records[date]).forEach(function(i){nextRecords[date][i]=migrateRecord(d.records[date][i]);});});
+  employees=d.employees.slice();employeeIds=(d.employeeIds||[]).slice();records=nextRecords;salarySettings=nextSalary;insuranceSettings=nextInsurance;
+  changeItems=cloneData(d.changeItems||{});companyName=d.companyName||'';payrollHistory=cloneData(d.payrollHistory||[]);
+  companyDisasterRate=d.companyDisasterRate==null?0.1496:Number(d.companyDisasterRate);ensureEmployeeIds();
+}
+function revisionOf(d){if(!d)return null;if(d.revision)return d.revision;var t=d.updatedAt;return t&&typeof t.toMillis==='function'?'legacy-'+t.toMillis():null;}
+function showSyncMessage(message){var el=document.getElementById('syncBadge');if(el){el.className='sync-badge err';el.textContent=message;}}
+function showLoadError(message){
+  var overlay=document.getElementById('loadingOverlay');overlay.style.display='flex';overlay.innerHTML='<h2>資料尚未載入</h2><p>'+escapeHTML(message)+'</p><button class="btn-add" onclick="loadData()">重新讀取</button>';
+}
+function refreshDataViews(){
+  document.getElementById('companyName').value=companyName;document.getElementById('companyDisasterRate').value=companyDisasterRate;
+  renderAttendance();renderEmpManager();renderSalaryList();renderInsuranceList();renderChangeItemList();renderReportEmpChecks();renderCostYearSelect();
+  document.getElementById('payslip-area').style.display='none';document.getElementById('dailyListWrap').style.display='none';
+  document.getElementById('reportWrap').innerHTML='<div class="empty-hint">資料已更新，請重新產生報表</div>';
+}
+async function loadData(){
+  if(!currentUser)return;
+  if(pendingSave&&!confirm('本機仍有未同步變更。重新讀取將放棄這些變更；可先取消並匯出備份。確定重新讀取？'))return;
+  var epoch=++sessionEpoch;var ref=getDocRef();dataReady=false;pendingSave=false;syncConflict=false;clearTimeout(saveTimer);
+  if(stopLiveSync){stopLiveSync();stopLiveSync=null;}
+  document.getElementById('loadingOverlay').style.display='flex';
+  try{
+    var doc=await ref.get({source:'server'});if(epoch!==sessionEpoch)return;
+    var d=doc.exists?doc.data():{employees:defaultEmployees()};applyData(d);loadedRevision=revisionOf(doc.exists?d:null);
+    dataReady=true;initUI();
+    stopLiveSync=ref.onSnapshot(function(snap){
+      if(epoch!==sessionEpoch||snap.metadata.hasPendingWrites||snap.metadata.fromCache)return;
+      var next=snap.exists?snap.data():null;var revision=revisionOf(next);
+      if(revision===loadedRevision)return;
+      if(pendingSave||savePromise){syncConflict=true;showSyncMessage('另一裝置已更新；請先匯出本機備份，再重新讀取');return;}
+      if(!next){dataReady=false;showLoadError('雲端資料已被移除，請重新讀取。');return;}
+      try{applyData(next);loadedRevision=revision;refreshDataViews();setSyncBadge('ok');}catch(e){dataReady=false;showLoadError(e.message);}
+    },function(e){if(epoch===sessionEpoch)showSyncMessage('即時同步中斷；儲存時仍會檢查版本');});
+  }catch(e){if(epoch!==sessionEpoch)return;dataReady=false;showLoadError('讀取失敗，已停止儲存，避免覆蓋原資料。'+e.message);showSyncMessage('讀取失敗');}
+}
+function saveData(){
+  if(!currentUser||!dataReady){showSyncMessage('尚未載入，未寫入雲端');return;}
+  pendingSave=true;localChangeVersion++;setSyncBadge('saving');clearTimeout(saveTimer);
+  saveTimer=setTimeout(function(){flushSave().catch(function(){});},800);
+}
+async function flushSave(){
+  clearTimeout(saveTimer);
+  if(savePromise){await savePromise;if(pendingSave)return flushSave();return;}
+  if(!pendingSave)return;
+  if(!currentUser||!dataReady)throw Error('請先載入資料');
+  var epoch=sessionEpoch,ref=getDocRef(),expected=loadedRevision,version=localChangeVersion;
+  var data=captureData();var nextRevision=newEmployeeId();
+  if(new Blob([JSON.stringify(data)]).size>900000){showSyncMessage('資料接近雲端單筆容量上限，請匯出備份');throw Error('資料接近單筆容量上限，未覆蓋雲端，請先匯出備份。');}
+  data.revision=nextRevision;data.updatedAt=firebase.firestore.FieldValue.serverTimestamp();
+  savePromise=db.runTransaction(async function(tx){
+    var snap=await tx.get(ref);
+    if(epoch!==sessionEpoch)throw Error('帳號已切換，已取消儲存');
+    if(revisionOf(snap.exists?snap.data():null)!==expected)throw Error('其他裝置已修改資料，已阻止覆蓋。請匯出本機備份後重新讀取。');
+    tx.set(ref,data);
+  });
+  try{
+    await savePromise;if(epoch!==sessionEpoch)return;
+    loadedRevision=nextRevision;syncConflict=false;pendingSave=version!==localChangeVersion;
+    if(!pendingSave)setSyncBadge('ok');
+  }catch(e){if(epoch===sessionEpoch){pendingSave=true;showSyncMessage('未同步：'+e.message);}throw e;}
+  finally{savePromise=null;}
+  if(pendingSave&&epoch===sessionEpoch)return flushSave();
+}
+async function signOut(){
+  if(!confirm('確定登出？'))return;
+  try{await flushSave();await auth.signOut();}catch(e){alert('尚有未儲存資料，暫不登出。'+e.message);}
+}
+window.addEventListener('beforeunload',function(e){if(pendingSave){e.preventDefault();e.returnValue='';}});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&pendingSave)flushSave().catch(function(){});});
+
+/* Read operations must not manufacture absent days or grow the database. */
+function getRecord(date,id){return records[date]&&records[date][id]?records[date][id]:migrateRecord(null);}
+function editableRecord(date,id){if(!records[date])records[date]={};if(!records[date][id])records[date][id]=migrateRecord(null);return records[date][id];}
+function cycleStatus(date,idx){
+  if(!dataReady)return;var r=editableRecord(date,idx),s=getSalary(idx);
+  r.status={absent:'full',full:'am',am:'pm',pm:'absent'}[r.status]||'full';
+  r.amIn=r.status==='full'||r.status==='am'?s.stdAmIn:'';r.amOut=r.status==='full'||r.status==='am'?s.stdAmOut:'';
+  r.pmIn=r.status==='full'||r.status==='pm'?s.stdPmIn:'';r.pmOut=r.status==='full'||r.status==='pm'?s.stdPmOut:'';
+  saveData();renderAttendance();
+}
+function toMin(t){if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(t||''))return null;return Number(t.slice(0,2))*60+Number(t.slice(3));}
+function validateTimeRecord(r){
+  if(!isPresent(r.status))return;
+  if(r.status!=='pm'&&(toMin(r.amIn)===null||toMin(r.amOut)===null||toMin(r.amIn)>=toMin(r.amOut)))throw Error('上午下班時間必須晚於上班時間');
+  if(r.status!=='am'&&(toMin(r.pmIn)===null||toMin(r.pmOut)===null||toMin(r.pmIn)>=toMin(r.pmOut)))throw Error('下午下班時間必須晚於上班時間');
+  if(r.status==='full'&&toMin(r.amOut)>toMin(r.pmIn))throw Error('上下午工作時段不可重疊');
+}
+function updateRecord(date,idx,key,val){
+  if(!dataReady)return;var r=cloneData(getRecord(date,idx));r[key]=val;
+  try{validateTimeRecord(r);}catch(e){alert(e.message);renderAttendance();return;}
+  if(!records[date])records[date]={};records[date][idx]=r;saveData();renderAttendance();
+}
+function calcOT(record,salary){
+  if(!isPresent(record.status))return{totalOT:0,totalPay:0};
+  function units(actual,std,before){var a=toMin(actual),s=toMin(std);if(a===null||s===null)return 0;return Math.ceil(Math.max(0,before?s-a:a-s)/30);}
+  var n=0;if(record.status!=='pm')n+=units(record.amIn,salary.stdAmIn,true)+units(record.amOut,salary.stdAmOut,false);
+  if(record.status!=='am')n+=units(record.pmIn,salary.stdPmIn,true)+units(record.pmOut,salary.stdPmOut,false);
+  return{totalOT:n/2,totalPay:Math.round(n*(Number(salary.otRate)||0))};
+}
+function calcLabor(grade){
+  var accident=Math.round(grade*0.115*0.2),employment=Math.round(grade*0.01*0.2),dis=Math.round(grade*companyDisasterRate/100);
+  var ae=Math.round(grade*0.115*0.7),ee=Math.round(grade*0.01*0.7);
+  return{emp:accident+employment,employer:ae+ee+dis,disasterAmt:dis,accident:accident,employment:employment,accidentEmployer:ae,employmentEmployer:ee};
+}
+function updateIns(i,key,val){
+  var n=Number(val);if(!Number.isFinite(n)||n<0||(key==='pensionRate'&&n>6)||(key==='dependents'&&!Number.isInteger(n))){alert('請輸入有效的非負數值；自提比率限 0–6%。');renderInsuranceList();return;}
+  getInsurance(i)[key]=n;saveData();renderInsuranceList();
+}
+function updateSalaryField(i,key,val){
+  var numeric=['base','otRate','dailyWage','monthlyLeaveDays'].indexOf(key)>=0;
+  if(numeric&&(!Number.isFinite(Number(val))||Number(val)<0)){alert('請輸入有效的非負數值');renderSalaryList();return;}
+  getSalary(i)[key]=numeric?Number(val):val;saveData();if(key==='type')renderSalaryList();
+}
+function remapAllEmployeeData(order){
+  var map={};order.forEach(function(oldI,newI){map[oldI]=newI;});
+  function remap(obj){var out={};Object.keys(obj||{}).forEach(function(k){if(map[k]!==undefined)out[map[k]]=obj[k];});return out;}
+  salarySettings=remap(salarySettings);insuranceSettings=remap(insuranceSettings);
+  Object.keys(records).forEach(function(d){records[d]=remap(records[d]);});
+  (changeItems.items||[]).forEach(function(item){item.amounts=remap(item.amounts);});
+  payrollHistory.forEach(function(h){if(h.leaveAdj)h.leaveAdj=remap(h.leaveAdj);});
+  var oldNames=employees.slice(),oldIds=employeeIds.slice();employees=order.map(function(i){return oldNames[i];});employeeIds=order.map(function(i){return oldIds[i];});
+}
+function addEmployee(){var inp=document.getElementById('newEmpName'),name=inp.value.trim();if(!name||!dataReady)return;ensureEmployeeIds();employees.push(name);employeeIds.push(newEmployeeId());inp.value='';saveData();renderEmpManager();}
+function deleteEmployee(i){
+  if(!dataReady||!confirm('確定刪除「'+employees[i]+'」？此人的出勤與設定會移除；已保存的新版薪資明細仍保留。建議先匯出備份。'))return;
+  ensureEmployeeIds();remapAllEmployeeData(employees.map(function(_,j){return j;}).filter(function(j){return j!==i;}));saveData();refreshDataViews();
+}
+function moveEmployee(fromIdx,toIdx){
+  if(fromIdx===toIdx)return;ensureEmployeeIds();var order=employees.map(function(_,i){return i;});var moved=order.splice(fromIdx,1)[0];order.splice(toIdx>fromIdx?toIdx-1:toIdx,0,moved);remapAllEmployeeData(order);saveData();renderEmpManager();
+}
+function calcLeaveAdj(empIdx,payStart,payEnd){
+  var s=getSalary(empIdx);
+  if(s.type!=='monthly'||!s.dailyWage)return{overDays:0,underDays:0,overAmt:0,underAmt:0,isLast:false};
+  var month=getMonthStr(payEnd),isLast=isLastDayOfMonth(payEnd),absent=0;
+  getDays(month+'-01',payEnd).forEach(function(d){absent+=absentDayCount(getRecord(d,empIdx).status);});
+  var previous=0;payrollHistory.forEach(function(h){if(getMonthStr(h.end)===month&&h.end<payEnd){var a=h.leaveAdj&&h.leaveAdj[empIdx];if(a)previous+=a.netAmount!==undefined?a.netAmount:(a.overAmt||0)-(a.underAmt||0);}});
+  var over=Math.max(0,absent-Number(s.monthlyLeaveDays||0)),under=isLast?Math.max(0,Number(s.monthlyLeaveDays||0)-absent):0;
+  var target=Math.round((over-under)*s.dailyWage),delta=target-previous;
+  return{overDays:delta>0?delta/s.dailyWage:0,underDays:delta<0?-delta/s.dailyWage:0,overAmt:Math.max(0,delta),underAmt:Math.max(0,-delta),netAmount:delta,isLast:isLast,refund:delta<0&&previous>0};
+}
+
+var originalCalcEmpPay=calcEmpPay;
+calcEmpPay=function(i,days,forceDeductIns,start,end){var p=originalCalcEmpPay(i,days,forceDeductIns,start,end);p.employeeId=employeeIds[i];if(p.leaveAdj&&p.leaveAdj.refund)p.addItems.forEach(function(item){if(item.name.indexOf('少休補薪')===0)item.name='休假差額退補';});return p;};
+var generatingPayroll=false;
+function validatePayroll(start,end){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end)||start>end)throw Error('請選擇正確發薪區間');
+  if(start.slice(0,7)!==end.slice(0,7))throw Error('超休按月結算，請將跨月區間分開產生');
+  if(!employees.length)throw Error('請先新增員工');
+  var overlapping=payrollHistory.some(function(h){return h.start<=end&&h.end>=start&&!(h.start===start&&h.end===end);});
+  if(overlapping)throw Error('發薪區間與已有紀錄重疊，請先確認或刪除重複紀錄');
+  if(payrollHistory.some(function(h){return h.end.slice(0,7)===end.slice(0,7)&&h.end>end;}))throw Error('本月已有後續期別。請先刪除後續期別，再由前往後重算，避免超休重複扣款');
+  employees.forEach(function(_,i){getDays(start,end).forEach(function(d){validateTimeRecord(getRecord(d,i));});});
+  var missing=[];employees.forEach(function(name,i){if(getSalary(i).type!=='monthly')return;getDays(end.slice(0,7)+'-01',end).forEach(function(d){if(!records[d]||!records[d][i])missing.push(name+' '+d);});});
+  if(missing.length&&!confirm('有 '+missing.length+' 筆月薪員工日期尚未登錄，依原本規則將視為缺勤。包含：'+missing.slice(0,4).join('、')+'。確定已確認出勤並繼續？'))throw Error('已取消，請先確認出勤');
+}
+async function generatePayslip(){
+  if(generatingPayroll)return;generatingPayroll=true;
+  var oldHistory=null;
+  try{
+    if(!dataReady)throw Error('資料尚未載入');await flushSave();ensureEmployeeIds();
+    var start=document.getElementById('ps-start').value,end=document.getElementById('ps-end').value;validatePayroll(start,end);
+    var days=getDays(start,end),allPays=employees.map(function(_,i){return calcEmpPay(i,days,undefined,start,end);});
+    var leaveAdjMap={};allPays.forEach(function(p,i){if(p.leaveAdj)leaveAdjMap[i]=p.leaveAdj;});
+    var rec={id:newEmployeeId(),start:start,end:end,total:allPays.reduce(function(sum,p){return sum+p.netPay;},0),date:today(),leaveAdj:leaveAdjMap,pays:cloneData(allPays),deductInsurance:deductInsurance,companyName:companyName,snapshotVersion:1};
+    var existing=payrollHistory.findIndex(function(h){return h.start===start&&h.end===end;});
+    if(existing>=0&&!confirm('此區間已有發薪紀錄。確定以本次計算結果取代？'))return;
+    oldHistory=cloneData(payrollHistory);if(existing>=0)payrollHistory[existing]=rec;else payrollHistory.push(rec);
+    payrollHistory.sort(function(a,b){return b.start.localeCompare(a.start);});saveData();await flushSave();
+    renderSavedPayslip(rec);
+  }catch(e){if(oldHistory){payrollHistory=oldHistory;pendingSave=true;}alert('薪資單尚未完成儲存：'+e.message);}
+  finally{generatingPayroll=false;}
+}
+function renderSavedPayslip(rec){
+  if(!rec.pays){alert('此舊紀錄沒有個人明細，請參考當時 PDF 或備份；系統不會用現在薪資重算舊資料。');return;}
+  var previousToggle=deductInsurance;deductInsurance=!!rec.deductInsurance;var pages='';
+  try{for(var i=0;i<rec.pays.length;i+=4){var cells=[];for(var j=0;j<4;j++)cells.push(rec.pays[i+j]?buildCell(rec.pays[i+j],rec.start,rec.end,rec.companyName||'公司名稱'):'<td class="ps-cell-empty"></td>');pages+='<table class="payslip-page"><tbody><tr>'+cells[0]+cells[1]+'</tr><tr>'+cells[2]+cells[3]+'</tr></tbody></table>';}}finally{deductInsurance=previousToggle;}
+  document.getElementById('payslipPages').innerHTML=pages;document.getElementById('payslip-area').style.display='block';
+}
+function historyPayFor(h,i){return Array.isArray(h.pays)?h.pays.find(function(p){return p.employeeId===employeeIds[i];}):null;}
+function renderCostReport(){
+  var year=String(document.getElementById('costYear').value),total=0;
+  var entries=payrollHistory.filter(function(h){return (h.date||h.end).slice(0,4)===year;});
+  var rows=entries.map(function(h){var amount=Number(h.total);var valid=Number.isFinite(amount);if(valid)total+=amount;var i=payrollHistory.indexOf(h);return '<tr><td>'+escapeHTML(h.start)+'</td><td>'+escapeHTML(h.end)+'</td><td>'+(valid?amount.toLocaleString():'舊紀錄無總額')+'</td><td><button class="btn-sm btn-accent" onclick="viewPayroll('+i+')">查看</button> <button class="btn-sm btn-red" onclick="deletePayroll('+i+')">刪除</button></td></tr>';}).join('');
+  document.getElementById('costReport').innerHTML='<div class="cost-card"><div>'+year+'年 已記錄實領總額（依發薪記錄日）</div><div class="cost-total">'+total.toLocaleString()+' 元</div><div style="font-size:12px">此金額為員工實領加總，未包含雇主額外負擔。舊紀錄沿用當時保存總額。</div></div><div class="report-table-wrap"><table class="data-table"><thead><tr><th>發薪起</th><th>發薪迄</th><th>已保存總額</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+function viewPayroll(i){if(!payrollHistory[i].pays){alert('此舊紀錄僅保存總額，無個人明細，請參考當時 PDF。');return;}showTab('payslip');renderSavedPayslip(payrollHistory[i]);}
+function deletePayroll(idx){
+  var h=payrollHistory[idx];if(payrollHistory.some(function(other){return other.end.slice(0,7)===h.end.slice(0,7)&&other.end>h.end;})){alert('請先刪除本月後續期別，再由前往後重算，避免超休結算錯誤。');return;}
+  if(!confirm('確定刪除此發薪紀錄？建議先匯出備份。'))return;payrollHistory.splice(idx,1);saveData();renderCostReport();
+}
+function exportBackup(){
+  var blob=new Blob([JSON.stringify(captureData(),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='attendance-backup-'+today()+'-'+Date.now()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},10000);
+}
+async function importBackup(input){
+  var file=input.files[0];if(!file)return;input.value='';
+  try{
+    if(!dataReady)throw Error('請先載入雲端資料');var d=validateBackup(JSON.parse(await file.text()));
+    if(!confirm('備份共有 '+d.employees.length+' 位員工。匯入會取代目前資料，請先確認已匯出目前的資料備份。是否繼續？'))return;
+    await flushSave();applyData(d);refreshDataViews();saveData();await flushSave();alert('匯入完成，雲端已確認儲存。');
+  }catch(e){alert('匯入尚未完成：'+e.message);}
+}
+function clearAll(){
+  if(!dataReady||!confirm('確定清除所有資料？請先匯出 JSON 備份。')||!confirm('再次確認：這會覆蓋目前雲端資料。'))return;
+  resetAppData();employees=defaultEmployees();ensureEmployeeIds();refreshDataViews();saveData();flushSave().then(function(){alert('雲端已確認清除。');}).catch(function(e){alert('清除尚未完成：'+e.message);});
+}
+function printCurrentDocument(){
+  var page=document.getElementById('payslip-area');
+  if(page&&page.style.display!=='none'&&document.getElementById('tab-payslip').style.display!=='none'){
+    var overflow=Array.from(document.querySelectorAll('.ps-cell')).some(function(cell){return cell.scrollHeight>cell.clientHeight+2||cell.getBoundingClientRect().height>530;});
+    if(overflow){alert('薪資明細超過四分之一 A4 可容納範圍，請縮短項目名稱或合併明細後再列印，避免裁掉金額。');return;}
+  }
+  window.print();
+}
+
 </script>
 </body>
 </html>
