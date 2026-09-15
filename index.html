@@ -553,7 +553,7 @@ function calcHealth(salary,dep){var d=dep||0;var m=getHealthMonthlyAmount(salary
 function calcPension(salary,rate){return Math.round(salary*(rate/100));}
 
 function today(){var n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
-function getPayPeriod(){var n=new Date();var y=n.getFullYear();var m=n.getMonth()+1;var d=n.getDate();var mm=String(m).padStart(2,'0');var last=new Date(y,m,0).getDate();if(d<=10)return{s:y+'-'+mm+'-01',e:y+'-'+mm+'-10'};if(d<=20)return{s:y+'-'+mm+'-11',e:y+'-'+mm+'-20'};return{s:y+'-'+mm+'-21',e:y+'-'+mm+'-'+String(last).padStart(2,'0')};}
+function getPayPeriod(date){var n=date||new Date();var y=n.getFullYear();var m=n.getMonth()+1;var d=n.getDate();var mm=String(m).padStart(2,'0');var last=new Date(y,m,0).getDate();if(d<=15)return{s:y+'-'+mm+'-01',e:y+'-'+mm+'-15'};return{s:y+'-'+mm+'-16',e:y+'-'+mm+'-'+String(last).padStart(2,'0')};}
 function getDays(start,end){var days=[],cur=new Date(start+'T00:00:00'),last=new Date(end+'T00:00:00');while(cur<=last){days.push(cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0'));cur.setDate(cur.getDate()+1);}return days;}
 function getRecord(date,id){if(!records[date])records[date]={};if(!records[date][id])records[date][id]=migrateRecord(null);return records[date][id];}
 function getSalary(i){if(!salarySettings[i])salarySettings[i]=migrateSalary(null);return salarySettings[i];}

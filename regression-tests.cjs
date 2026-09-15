@@ -15,6 +15,11 @@ function context(){
 let passed=0;
 function test(name,fn){fn();passed++;console.log('PASS '+name);}
 const {s,node}=context();
+test('semi-monthly periods cover boundaries and all month lengths',()=>{
+ for(const [date,start,end] of [['2026-09-01','2026-09-01','2026-09-15'],['2026-09-15','2026-09-01','2026-09-15'],['2026-09-16','2026-09-16','2026-09-30'],['2026-09-30','2026-09-16','2026-09-30'],['2026-12-31','2026-12-16','2026-12-31'],['2026-02-28','2026-02-16','2026-02-28'],['2028-02-29','2028-02-16','2028-02-29']]){
+  const p=s.getPayPeriod(new Date(date+'T12:00:00'));assert.equal(p.s,start);assert.equal(p.e,end);
+ }
+});
 const standard={stdAmIn:'08:00',stdAmOut:'12:00',stdPmIn:'13:00',stdPmOut:'17:00',otRate:100};
 test('half-hour rate: 2h is 400',()=>assert.equal(s.calcOT({status:'full',amIn:'07:30',amOut:'12:30',pmIn:'13:00',pmOut:'18:00'},standard).totalPay,400));
 test('one minute rounds to one half-hour',()=>assert.equal(s.calcOT({status:'am',amIn:'07:59',amOut:'12:00'},standard).totalPay,100));
