@@ -1196,6 +1196,47 @@ function refreshDataViews(){
   document.getElementById('payslip-area').style.display='none';document.getElementById('dailyListWrap').style.display='none';
   document.getElementById('reportWrap').innerHTML='<div class="empty-hint">資料已更新，請重新產生報表</div>';
 }
+/* ══ 分檔儲存（2026-10-02）══
+ * 主文件：員工、設定、異動等（不含出勤與發薪歷史）
+ * chunks 子集合：r-YYYY-MM = 該月出勤；p-YYYY = 該年發薪歷史
+ * 內容以 JSON 字串存放，避免 Firestore 索引數量上限，也避開單一文件 1MB 上限。
+ */
+var lastSavedChunks={};
+function chunkRef(key){return getDocRef().collection('chunks').doc(key);}
+function splitChunks(data){
+  var chunks={};
+  var recs=data.records||{},months={};
+  Object.keys(recs).forEach(function(date){var ym=date.slice(0,7);if(!months[ym])months[ym]={};months[ym][date]=recs[date];});
+  Object.keys(months).forEach(function(ym){chunks['r-'+ym]=JSON.stringify(months[ym]);});
+  var years={};
+  (data.payrollHistory||[]).forEach(function(h,idx){var y=String(h.start||'').slice(0,4)||'0000';if(!years[y])years[y]=[];years[y].push({i:idx,h:h});});
+  Object.keys(years).forEach(function(y){chunks['p-'+y]=JSON.stringify(years[y]);});
+  return chunks;
+}
+function joinChunks(main,chunkMap){
+  var d=cloneData(main);delete d.chunkKeys;delete d.chunked;delete d.revision;delete d.updatedAt;
+  var recs={},pays=[];
+  Object.keys(chunkMap).forEach(function(key){
+    var v=JSON.parse(chunkMap[key]);
+    if(key.indexOf('r-')===0)Object.keys(v).forEach(function(date){recs[date]=v[date];});
+    else if(key.indexOf('p-')===0)v.forEach(function(x){pays.push(x);});
+  });
+  pays.sort(function(a,b){return a.i-b.i;});
+  d.records=recs;d.payrollHistory=pays.map(function(x){return x.h;});
+  return d;
+}
+async function readChunks(main){
+  var map={};
+  var keys=(main&&main.chunkKeys)||[];
+  var docs=await Promise.all(keys.map(function(k){return chunkRef(k).get({source:'server'});}));
+  docs.forEach(function(doc,i){if(!doc.exists)throw Error('雲端分檔遺失：'+keys[i]+'，請重新讀取或匯入備份');map[keys[i]]=doc.data().json;});
+  return map;
+}
+async function resolveRemote(main){
+  if(!main)return {data:{employees:defaultEmployees()},chunks:null,legacy:false};
+  if(main.chunked){var map=await readChunks(main);return {data:joinChunks(main,map),chunks:map,legacy:false};}
+  return {data:main,chunks:null,legacy:true};
+}
 async function loadData(){
   if(!currentUser)return;
   if(pendingSave&&!confirm('本機仍有未同步變更。重新讀取將放棄這些變更；可先取消並匯出備份。確定重新讀取？'))return;
@@ -1204,15 +1245,22 @@ async function loadData(){
   document.getElementById('loadingOverlay').style.display='flex';
   try{
     var doc=await ref.get({source:'server'});if(epoch!==sessionEpoch)return;
-    var d=doc.exists?doc.data():{employees:defaultEmployees()};applyData(d);loadedRevision=revisionOf(doc.exists?d:null);
+    var main=doc.exists?doc.data():null;
+    var res=await resolveRemote(main);if(epoch!==sessionEpoch)return;
+    applyData(res.data);loadedRevision=revisionOf(main);
+    lastSavedChunks=res.chunks?Object.assign({},res.chunks):{};
     dataReady=true;initUI();
+    if(res.legacy){saveData();showSyncMessage('⟳ 正在轉換為分檔儲存...');}
     stopLiveSync=ref.onSnapshot(function(snap){
       if(epoch!==sessionEpoch||snap.metadata.hasPendingWrites||snap.metadata.fromCache)return;
       var next=snap.exists?snap.data():null;var revision=revisionOf(next);
       if(revision===loadedRevision)return;
       if(pendingSave||savePromise){syncConflict=true;showSyncMessage('另一裝置已更新；請先匯出本機備份，再重新讀取');return;}
       if(!next){dataReady=false;showLoadError('雲端資料已被移除，請重新讀取。');return;}
-      try{applyData(next);loadedRevision=revision;refreshDataViews();setSyncBadge('ok');}catch(e){dataReady=false;showLoadError(e.message);}
+      resolveRemote(next).then(function(r){
+        if(epoch!==sessionEpoch||pendingSave||savePromise)return;
+        applyData(r.data);loadedRevision=revision;lastSavedChunks=r.chunks?Object.assign({},r.chunks):{};refreshDataViews();setSyncBadge('ok');
+      }).catch(function(e){dataReady=false;showLoadError(e.message);});
     },function(e){if(epoch===sessionEpoch)showSyncMessage('即時同步中斷；儲存時仍會檢查版本');});
   }catch(e){if(epoch!==sessionEpoch)return;dataReady=false;showLoadError('讀取失敗，已停止儲存，避免覆蓋原資料。'+e.message);showSyncMessage('讀取失敗');}
 }
@@ -1228,17 +1276,27 @@ async function flushSave(){
   if(!currentUser||!dataReady)throw Error('請先載入資料');
   var epoch=sessionEpoch,ref=getDocRef(),expected=loadedRevision,version=localChangeVersion;
   var data=captureData();var nextRevision=newEmployeeId();
-  if(new Blob([JSON.stringify(data)]).size>900000){showSyncMessage('資料接近雲端單筆容量上限，請匯出備份');throw Error('資料接近單筆容量上限，未覆蓋雲端，請先匯出備份。');}
+  var chunks=splitChunks(data);
+  delete data.records;delete data.payrollHistory;
+  data.chunked=true;data.chunkKeys=Object.keys(chunks).sort();
+  if(new Blob([JSON.stringify(data)]).size>900000){showSyncMessage('主資料接近容量上限，請匯出備份');throw Error('主資料接近單筆容量上限，未覆蓋雲端。');}
+  var big=data.chunkKeys.filter(function(k){return new Blob([chunks[k]]).size>900000;});
+  if(big.length){showSyncMessage('分檔過大：'+big.join(','));throw Error('分檔過大：'+big.join(','));}
+  var writes=data.chunkKeys.filter(function(k){return lastSavedChunks[k]!==chunks[k];});
+  var removes=Object.keys(lastSavedChunks).filter(function(k){return !(k in chunks);});
+  if(writes.length+removes.length>450){showSyncMessage('單次變更過多');throw Error('單次變更過多，請分次操作');}
   data.revision=nextRevision;data.updatedAt=firebase.firestore.FieldValue.serverTimestamp();
   savePromise=db.runTransaction(async function(tx){
     var snap=await tx.get(ref);
     if(epoch!==sessionEpoch)throw Error('帳號已切換，已取消儲存');
     if(revisionOf(snap.exists?snap.data():null)!==expected)throw Error('其他裝置已修改資料，已阻止覆蓋。請匯出本機備份後重新讀取。');
+    writes.forEach(function(k){tx.set(chunkRef(k),{json:chunks[k]});});
+    removes.forEach(function(k){tx.delete(chunkRef(k));});
     tx.set(ref,data);
   });
   try{
     await savePromise;if(epoch!==sessionEpoch)return;
-    loadedRevision=nextRevision;syncConflict=false;pendingSave=version!==localChangeVersion;
+    loadedRevision=nextRevision;syncConflict=false;lastSavedChunks=chunks;pendingSave=version!==localChangeVersion;
     if(!pendingSave)setSyncBadge('ok');
   }catch(e){if(epoch===sessionEpoch){pendingSave=true;showSyncMessage('未同步：'+e.message);}throw e;}
   finally{savePromise=null;}
