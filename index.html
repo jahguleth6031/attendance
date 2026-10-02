@@ -1289,7 +1289,9 @@ async function flushSave(){
   savePromise=db.runTransaction(async function(tx){
     var snap=await tx.get(ref);
     if(epoch!==sessionEpoch)throw Error('帳號已切換，已取消儲存');
-    if(revisionOf(snap.exists?snap.data():null)!==expected)throw Error('其他裝置已修改資料，已阻止覆蓋。請匯出本機備份後重新讀取。');
+    var serverRev=revisionOf(snap.exists?snap.data():null);
+    if(serverRev===nextRevision)return; // 網路重送：這筆其實已經寫入成功，不是別台裝置
+    if(serverRev!==expected)throw Error('其他裝置已修改資料，已阻止覆蓋。請匯出本機備份後重新讀取。');
     writes.forEach(function(k){tx.set(chunkRef(k),{json:chunks[k]});});
     removes.forEach(function(k){tx.delete(chunkRef(k));});
     tx.set(ref,data);
